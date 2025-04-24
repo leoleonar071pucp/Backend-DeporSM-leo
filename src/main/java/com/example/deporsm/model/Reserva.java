@@ -11,8 +11,8 @@ public class Reserva {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idReserva")
-    private Integer idReserva;
+    private Long id;
+
 
     @Column(name = "dniUsuario")
     private String dniUsuario;
@@ -38,7 +38,6 @@ public class Reserva {
     @Column(name = "nota_reserva")
     private String notaReserva;
 
-    // ✅ Enums embebidos (pueden ir fuera también)
     public enum Estado {
         pendiente, confirmada, cancelada
     }

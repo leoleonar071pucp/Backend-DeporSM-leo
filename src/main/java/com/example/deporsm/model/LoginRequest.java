@@ -1,15 +1,15 @@
 package com.example.deporsm.model;
 
 public class LoginRequest {
-    private String correo;
+    private String email;
     private String password;
 
-    public String getCorreo() {
-        return correo;
+    public String getEmail() {
+        return email;
     }
 
-    public void setCorreo(String correo) {
-        this.correo = correo;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getPassword() {
