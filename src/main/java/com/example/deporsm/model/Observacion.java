@@ -4,44 +4,43 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.sql.Date;
-import java.sql.Time;
 import java.sql.Timestamp;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "reservas")
-public class Reserva {
+@Table(name = "observaciones")
+public class Observacion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @ManyToOne
-    @JoinColumn(name = "usuario_id")
-    private Usuario usuario;
-
-    @ManyToOne
     @JoinColumn(name = "instalacion_id")
     private Instalacion instalacion;
 
-    private Date fecha;
+    @ManyToOne
+    @JoinColumn(name = "usuario_id")
+    private Usuario usuario;
 
-    @Column(name = "hora_inicio")
-    private Time horaInicio;
+    private String titulo;
 
-    @Column(name = "hora_fin")
-    private Time horaFin;
+    private String descripcion;
 
     private String estado;
 
-    private String motivo; // antes era notaReserva
+    private String prioridad;
 
-    @Column(name = "numero_asistentes")
-    private Integer numeroAsistentes;
+    @Column(name = "fecha_resolucion")
+    private Timestamp fechaResolucion;
 
-    private String comentarios;
+    @ManyToOne
+    @JoinColumn(name = "resuelto_por ")
+    private Usuario resueltoPor;
+
+    @Column(name = "comentario_resolucion", columnDefinition = "TEXT")
+    private String comentarioResolucion;
 
     @Column(name = "created_at")
     private Timestamp createdAt;

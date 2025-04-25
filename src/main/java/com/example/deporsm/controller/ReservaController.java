@@ -19,6 +19,6 @@ public class ReservaController {
 
     @GetMapping("/usuario/{dni}")
     public List<Reserva> obtenerReservasPorUsuario(@PathVariable String dni) {
-        return reservaRepository.findByDniUsuario(dni);
+        return reservaRepository.findByUsuario_Dni(dni);
     }
 }

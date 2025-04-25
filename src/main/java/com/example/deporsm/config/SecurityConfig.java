@@ -22,8 +22,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
-
-
 @Configuration
 public class SecurityConfig {
 
@@ -32,8 +30,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login", "/api/auth/me").permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll() // Permite TODAS las peticiones (desarrollo o API abierta)
                 )
                 .formLogin(form -> form.disable())
                 .logout(logout -> logout
@@ -81,8 +78,4 @@ public class SecurityConfig {
     public static HttpSessionEventPublisher httpSessionEventPublisher() {
         return new HttpSessionEventPublisher();
     }
-
 }
-
-
-
