@@ -22,7 +22,7 @@ public class MantenimientoInstalacionController {
     }
 
     // Filtro combinado por texto, estado, tipo e instalación
-    @GetMapping("/filtrar")
+        @GetMapping("/filtrar")
     public ResponseEntity<List<MantenimientoDTO>> filtrar(
             @RequestParam(required = false) String texto,
             @RequestParam(required = false) Integer instalacionId

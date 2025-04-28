@@ -1,5 +1,6 @@
 package com.example.deporsm.controller;
 
+import com.example.deporsm.dto.CoordinadorDTO;
 import com.example.deporsm.model.Usuario;
 import com.example.deporsm.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,11 @@ public class UsuarioController {
     @PostMapping
     public Usuario crearUsuario(@RequestBody Usuario usuario) {
         return usuarioRepository.save(usuario);
+    }
+
+    @GetMapping("/allCoordinadores")
+    public List<CoordinadorDTO> listarCoordinadores() {
+        return usuarioRepository.findAllCoordinadores();
     }
 }
 

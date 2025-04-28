@@ -52,3 +52,4 @@ public interface MantenimientoInstalacionRepository extends JpaRepository<Manten
                                                @Param("instalacionId") Integer instalacionId);
 
     }
+    
