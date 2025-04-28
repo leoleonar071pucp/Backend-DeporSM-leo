@@ -1,14 +1,13 @@
 package com.example.deporsm.controller;
 
+import com.example.deporsm.dto.ReservaListDTO;
 import com.example.deporsm.model.Reserva;
 import com.example.deporsm.repository.ReservaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/reservas")
@@ -18,7 +17,23 @@ public class ReservaController {
     private ReservaRepository reservaRepository;
 
     @GetMapping("/usuario/{dni}")
-    public List<Reserva> obtenerReservasPorUsuario(@PathVariable String dni) {
-        return reservaRepository.findByUsuario_Dni(dni);
+    public List<ReservaListDTO> obtenerReservasPorUsuario(@PathVariable String dni) {
+        List<Reserva> reservas = reservaRepository.findByUsuario_Dni(dni);
+
+        return reservas.stream()
+                .map(reserva -> {
+                    ReservaListDTO dto = new ReservaListDTO(
+                            reserva.getId(),
+                            reserva.getUsuario().getNombre(),
+                            reserva.getInstalacion().getNombre(),
+                            reserva.getFecha().toLocalDate(),
+                            reserva.getHoraInicio().toLocalTime(),
+                            reserva.getHoraFin().toLocalTime(),
+                            reserva.getEstado(),
+                            reserva.getEstadoPago() // Asignar estadoPago
+                    );
+                    return dto;
+                })
+                .collect(Collectors.toList()); // Usamos collect para compatibilidad con Java 8+
     }
 }

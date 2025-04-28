@@ -36,12 +36,15 @@ public class Reserva {
 
     private String estado;
 
-    private String motivo; // antes era notaReserva
+    private String motivo;
 
     @Column(name = "numero_asistentes")
     private Integer numeroAsistentes;
 
     private String comentarios;
+
+    @Column(name = "estado_pago") // Nuevo campo
+    private String estadoPago;
 
     @Column(name = "created_at")
     private Timestamp createdAt;
