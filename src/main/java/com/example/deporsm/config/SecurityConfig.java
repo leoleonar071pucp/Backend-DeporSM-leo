@@ -30,7 +30,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // Permite TODAS las peticiones (desarrollo o API abierta)
+                        .anyRequest().permitAll()  // <<< CAMBIO aquí: permitir TODO sin autenticación
                 )
                 .formLogin(form -> form.disable())
                 .logout(logout -> logout
