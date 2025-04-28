@@ -26,9 +26,9 @@ public class ReservaController {
                             reserva.getId(),
                             reserva.getUsuario().getNombre(),
                             reserva.getInstalacion().getNombre(),
-                            reserva.getFecha().toLocalDate(),
-                            reserva.getHoraInicio().toLocalTime(),
-                            reserva.getHoraFin().toLocalTime(),
+                            reserva.getFecha(),
+                            reserva.getHoraInicio(),
+                            reserva.getHoraFin(),
                             reserva.getEstado(),
                             reserva.getEstadoPago() // Asignar estadoPago
                     );

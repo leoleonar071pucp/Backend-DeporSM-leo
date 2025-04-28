@@ -1,22 +1,24 @@
 package com.example.deporsm.dto;
 
+import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Date;
 
 public class ReservaListDTO {
 
     private Integer id;
     private String usuarioNombre;
     private String instalacionNombre;
-    private LocalDate fecha;
-    private LocalTime horaInicio;
-    private LocalTime horaFin;
+    private Date fecha;
+    private Time horaInicio;
+    private Time horaFin;
     private String estado;
     private String estadoPago;
 
     // Constructor con parámetros para usarlo en la consulta
-    public ReservaListDTO(Integer id, String usuarioNombre, String instalacionNombre, LocalDate fecha,
-                          LocalTime horaInicio, LocalTime horaFin, String estado, String estadoPago) {
+    public ReservaListDTO(Integer id, String usuarioNombre, String instalacionNombre, Date fecha,
+                          Time horaInicio, Time horaFin, String estado, String estadoPago) {
         this.id = id;
         this.usuarioNombre = usuarioNombre;
         this.instalacionNombre = instalacionNombre;
@@ -52,27 +54,27 @@ public class ReservaListDTO {
         this.instalacionNombre = instalacionNombre;
     }
 
-    public LocalDate getFecha() {
+    public Date getFecha() {
         return fecha;
     }
 
-    public void setFecha(LocalDate fecha) {
+    public void setFecha(Date fecha) {
         this.fecha = fecha;
     }
 
-    public LocalTime getHoraInicio() {
+    public Time getHoraInicio() {
         return horaInicio;
     }
 
-    public void setHoraInicio(LocalTime horaInicio) {
+    public void setHoraInicio(Time horaInicio) {
         this.horaInicio = horaInicio;
     }
 
-    public LocalTime getHoraFin() {
+    public Time getHoraFin() {
         return horaFin;
     }
 
-    public void setHoraFin(LocalTime horaFin) {
+    public void setHoraFin(Time horaFin) {
         this.horaFin = horaFin;
     }
 
