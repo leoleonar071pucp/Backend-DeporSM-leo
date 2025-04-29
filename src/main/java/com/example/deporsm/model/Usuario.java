@@ -1,5 +1,6 @@
 package com.example.deporsm.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -59,26 +60,33 @@ public class Usuario {
     private Timestamp updatedAt;
 
     @OneToMany(mappedBy = "usuario")
+    @JsonIgnore
     private List<Reserva> reservas;
 
     @OneToMany(mappedBy = "usuario")
+    @JsonIgnore
     private List<Observacion> observaciones;
 
     @OneToMany(mappedBy = "usuario")
+    @JsonIgnore
     private List<Notificacion> notificaciones;
 
     @OneToMany(mappedBy = "usuario")
+    @JsonIgnore
     private List<Asistencia> asistencias;
 
 
 
 
     @OneToMany(mappedBy = "usuario")
+    @JsonIgnore
     private List<CoordinadorInstalacion> coordinaciones;
 
     @OneToMany(mappedBy = "usuario")
+    @JsonIgnore
     private List<LogActividad> logs;
 
     @OneToMany(mappedBy = "usuario")
+    @JsonIgnore
     private List<PreferenciaNotificacion> preferencias;
 }

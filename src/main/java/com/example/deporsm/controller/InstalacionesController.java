@@ -1,5 +1,6 @@
 package com.example.deporsm.controller;
 
+import com.example.deporsm.dto.InstalacionDTO;
 import com.example.deporsm.model.Instalacion;
 import com.example.deporsm.repository.InstalacionRepository;
 import org.springframework.http.ResponseEntity;
@@ -37,7 +38,7 @@ public class InstalacionesController {
     }
 
     @GetMapping("/tipo")
-    public List<Instalacion> filtrarPorTipo(@RequestParam String tipo) {
+    public List<InstalacionDTO> filtrarPorTipo(@RequestParam String tipo) {
         return repository.findByTipo(tipo);
     }
 

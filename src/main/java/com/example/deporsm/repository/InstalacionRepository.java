@@ -1,5 +1,6 @@
 package com.example.deporsm.repository;
 
+import com.example.deporsm.dto.InstalacionDTO;
 import com.example.deporsm.model.Instalacion;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,7 +10,7 @@ import java.util.List;
 
 public interface InstalacionRepository extends JpaRepository<Instalacion, Integer> {
 
-    List<Instalacion> findByTipo(String tipo);
+    List<InstalacionDTO> findByTipo(String tipo);
 
     List<Instalacion> findByActivo(Boolean activo);
 
