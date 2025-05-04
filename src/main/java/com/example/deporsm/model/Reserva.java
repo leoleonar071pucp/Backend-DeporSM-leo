@@ -47,7 +47,7 @@ public class Reserva {
     @Column(name="comentarios")
     private String comentarios;
 
-    @Column(name = "estado_pago") // Nuevo campo
+    @Column(name = "estado_pago") // Corregido a estado_pago en la base de datos
     private String estadoPago;
 
     @Column(name = "created_at")
@@ -55,6 +55,4 @@ public class Reserva {
 
     @Column(name = "updated_at")
     private Timestamp updatedAt;
-
-
 }
