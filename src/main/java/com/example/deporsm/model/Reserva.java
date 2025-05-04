@@ -26,6 +26,7 @@ public class Reserva {
     @JoinColumn(name = "instalacion_id")
     private Instalacion instalacion;
 
+    @Column(name="fecha")
     private Date fecha;
 
     @Column(name = "hora_inicio")
@@ -34,14 +35,20 @@ public class Reserva {
     @Column(name = "hora_fin")
     private Time horaFin;
 
+    @Column(name="estado")
     private String estado;
 
-    private String motivo; // antes era notaReserva
+    @Column(name="motivo")
+    private String motivo;
 
     @Column(name = "numero_asistentes")
     private Integer numeroAsistentes;
 
+    @Column(name="comentarios")
     private String comentarios;
+
+    @Column(name = "estado_pago") // Corregido a estado_pago en la base de datos
+    private String estadoPago;
 
     @Column(name = "created_at")
     private Timestamp createdAt;
