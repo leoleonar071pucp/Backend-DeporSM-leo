@@ -38,6 +38,9 @@ public class Instalacion {
     @Column(name = "imagen_url")
     private String imagenUrl;
 
+    @Column(name = "precio")
+    private float precio;
+
     private Boolean activo;
 
     @Column(name = "created_at")
