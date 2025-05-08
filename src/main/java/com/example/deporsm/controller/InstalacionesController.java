@@ -6,6 +6,7 @@ import com.example.deporsm.repository.InstalacionRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,10 +63,7 @@ public class InstalacionesController {
         return repository.autocompleteByNombreOrTipo(query);
     }
 
-    @PostMapping
-    public Instalacion crear(@RequestBody Instalacion nueva) {
-        return repository.save(nueva);
-    }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<Instalacion> obtenerPorId(@PathVariable Integer id) {
@@ -95,5 +93,19 @@ public class InstalacionesController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping
+    public Instalacion crearInstalacion(@RequestBody Instalacion nuevaInstalacion) {
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        nuevaInstalacion.setCreatedAt(now);
+        nuevaInstalacion.setUpdatedAt(now);
+
+        // Validación simple
+        if (nuevaInstalacion.getActivo() == null) {
+            nuevaInstalacion.setActivo(true); // por defecto activa
+        }
+
+        return repository.save(nuevaInstalacion);
     }
 }
