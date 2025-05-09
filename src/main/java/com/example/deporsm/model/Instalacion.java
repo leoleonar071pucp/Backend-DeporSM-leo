@@ -50,11 +50,15 @@ public class Instalacion {
     private Timestamp updatedAt;
 
     // Relaciones con otras entidades
-    @OneToMany(mappedBy = "instalacion")
+    @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Reserva> reservas;
 
-    @OneToMany(mappedBy = "instalacion")
+    @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Observacion> observaciones;
+
+    @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<MantenimientoInstalacion> mantenimientos;
 }

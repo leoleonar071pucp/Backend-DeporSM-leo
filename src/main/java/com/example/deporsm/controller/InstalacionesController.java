@@ -1,6 +1,7 @@
 package com.example.deporsm.controller;
 
 import com.example.deporsm.dto.InstalacionDTO;
+import com.example.deporsm.dto.InstalacionEstadoDTO;
 import com.example.deporsm.model.Instalacion;
 import com.example.deporsm.repository.InstalacionRepository;
 import org.springframework.http.ResponseEntity;
@@ -18,9 +19,11 @@ import java.util.Optional;
 public class InstalacionesController {
 
     private final InstalacionRepository repository;
+    private final InstalacionRepository instalacionRepository;
 
-    public InstalacionesController(InstalacionRepository repository) {
+    public InstalacionesController(InstalacionRepository repository, InstalacionRepository instalacionRepository) {
         this.repository = repository;
+        this.instalacionRepository = instalacionRepository;
     }
 
     @GetMapping
@@ -108,4 +111,18 @@ public class InstalacionesController {
 
         return repository.save(nuevaInstalacion);
     }
+
+    @GetMapping("/estado-instalaciones")
+    public List<InstalacionEstadoDTO> obtenerEstadoActualDeInstalaciones() {
+        return instalacionRepository.getEstadoActualInstalaciones();
+    }
+
+    @DeleteMapping("/api/instalaciones/{id}")
+    public ResponseEntity<Void> eliminarInstalacion(@PathVariable Integer id) {
+        Instalacion inst = instalacionRepository.findById(id).orElseThrow();
+        instalacionRepository.delete(inst);
+
+        return ResponseEntity.noContent().build();
+    }
+
 }

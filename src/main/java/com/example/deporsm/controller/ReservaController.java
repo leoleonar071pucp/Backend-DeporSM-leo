@@ -1,6 +1,8 @@
 package com.example.deporsm.controller;
 
+import com.example.deporsm.dto.DashboardStatsDTO;
 import com.example.deporsm.dto.ReservaListDTO;
+import com.example.deporsm.dto.ReservaRecienteDTO;
 import com.example.deporsm.model.Reserva;
 import com.example.deporsm.repository.ReservaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,4 +38,17 @@ public class ReservaController {
                 })
                 .collect(Collectors.toList()); // Usamos collect para compatibilidad con Java 8+
     }
+
+    @GetMapping("/stats")
+    public DashboardStatsDTO obtenerEstadisticasDashboard() {
+        return reservaRepository.getDashboardStats();
+    }
+
+    @GetMapping("/recientes")
+    public List<ReservaRecienteDTO> obtenerReservasRecientes() {
+        return reservaRepository.obtenerReservasRecientes();
+    }
+
+
+
 }

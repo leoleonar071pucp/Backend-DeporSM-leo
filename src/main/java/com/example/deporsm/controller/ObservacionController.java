@@ -2,6 +2,7 @@
 package com.example.deporsm.controller;
 
 import com.example.deporsm.dto.ObservacionDTO;
+import com.example.deporsm.dto.ObservacionRecienteDTO;
 import com.example.deporsm.repository.ObservacionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -19,4 +20,14 @@ public class ObservacionController {
     public List<ObservacionDTO> listarObservaciones() {
         return observacionRepository.findAllObservacionesDTO();
     }
+
+    @GetMapping("/recientes")
+    public List<ObservacionRecienteDTO> listarObservacionesRecientes() {
+        return observacionRepository.findObservacionesRecientes();
+    }
+
+
+
 }
+
+

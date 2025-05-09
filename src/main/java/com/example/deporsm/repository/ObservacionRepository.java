@@ -1,6 +1,7 @@
 // src/main/java/com/example/deporsm/repository/ObservacionRepository.java
 package com.example.deporsm.repository;
 
+import com.example.deporsm.dto.ObservacionRecienteDTO;
 import com.example.deporsm.model.Observacion;
 import com.example.deporsm.dto.ObservacionDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -45,4 +46,19 @@ public interface ObservacionRepository extends JpaRepository<Observacion, Intege
                 ))
                 .toList();
     }
+
+    @Query(value = """
+        SELECT 
+            o.id AS idObservacion,
+            i.nombre AS nombreInstalacion,
+            o.descripcion,
+            o.prioridad,
+            DATE(o.created_at) AS fecha
+        FROM observaciones o
+        JOIN instalaciones i ON o.instalacion_id = i.id
+        ORDER BY o.created_at DESC
+        LIMIT 4
+    """, nativeQuery = true)
+    List<ObservacionRecienteDTO> findObservacionesRecientes();
+
 }
