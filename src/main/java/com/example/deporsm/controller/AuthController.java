@@ -93,25 +93,6 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
-        System.out.println("🚪 Procesando logout...");
-        
-        try {
-            // Invalidar la sesión actual
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                session.invalidate();
-            }
-            
-            // Limpiar el contexto de seguridad
-            SecurityContextHolder.clearContext();
-            
-            System.out.println("👋 Usuario desconectado correctamente");
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            System.out.println("❌ Error en logout: " + e.getMessage());
-            return ResponseEntity.status(500).build();
-        }
-    }
+    // Eliminamos el método logout para evitar conflictos con Spring Security
+    // Spring Security manejará automáticamente las peticiones a /api/auth/logout
 }

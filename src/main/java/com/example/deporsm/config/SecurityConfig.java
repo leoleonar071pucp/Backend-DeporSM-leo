@@ -3,6 +3,7 @@ package com.example.deporsm.config;
 import com.example.deporsm.service.CustomUserDetailsService;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.tomcat.util.http.Rfc6265CookieProcessor;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
@@ -48,6 +49,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Permitir OPTIONS sin autenticación (preflight)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Permitir explícitamente el endpoint de logout
+                        .requestMatchers("/api/auth/logout").permitAll()
                         // Permitir todas las rutas sin autorización estricta (para depuración)
                         .anyRequest().permitAll()
                 )
@@ -57,6 +60,12 @@ public class SecurityConfig {
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
                         .deleteCookies("JSESSIONID")
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            // Establecer headers CORS explícitamente para la respuesta de logout
+                            response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+                            response.setHeader("Access-Control-Allow-Credentials", "true");
+                            response.setStatus(HttpServletResponse.SC_OK);
+                        })
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
