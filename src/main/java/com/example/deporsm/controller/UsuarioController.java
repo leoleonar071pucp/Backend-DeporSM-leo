@@ -1,12 +1,18 @@
 package com.example.deporsm.controller;
 
 import com.example.deporsm.dto.CoordinadorDTO;
+import com.example.deporsm.dto.PerfilUsuarioDTO;
 import com.example.deporsm.model.Usuario;
 import com.example.deporsm.repository.UsuarioRepository;
+import com.example.deporsm.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -14,20 +20,100 @@ public class UsuarioController {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+    private UsuarioService usuarioService;
 
     @GetMapping
     public List<Usuario> listarUsuarios() {
-        return usuarioRepository.findAll();
+        return usuarioService.listarUsuarios();
     }
 
     @PostMapping
     public Usuario crearUsuario(@RequestBody Usuario usuario) {
-        return usuarioRepository.save(usuario);
+        return usuarioService.guardarUsuario(usuario);
     }
 
     @GetMapping("/allCoordinadores")
     public List<CoordinadorDTO> listarCoordinadores() {
-        return usuarioRepository.findAllCoordinadores();
+        return usuarioService.listarCoordinadores();
+    }
+    
+    @GetMapping("/perfil")
+    public ResponseEntity<Usuario> getPerfil() {
+        System.out.println("[DEBUG] Iniciando getPerfil");
+        try {
+            // Obtener autenticación directamente del contexto de seguridad
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            
+            if (authentication == null || !authentication.isAuthenticated() 
+                || authentication.getPrincipal().equals("anonymousUser")) {
+                System.out.println("[DEBUG] getPerfil - Usuario no autenticado o anónimo");
+                return ResponseEntity.status(401).build();
+            }
+            
+            String email = authentication.getName();
+            System.out.println("[DEBUG] getPerfil - Email encontrado: " + email);
+            
+            Optional<Usuario> usuario = usuarioRepository.findByEmail(email);
+            
+            if (usuario.isPresent()) {
+                System.out.println("[DEBUG] getPerfil - Usuario encontrado: " + usuario.get().getEmail() 
+                    + ", rol: " + usuario.get().getRol().getNombre());
+                return ResponseEntity.ok(usuario.get());
+            } else {
+                System.out.println("[DEBUG] getPerfil - No se encontró usuario con email: " + email);
+                return ResponseEntity.status(401).build();
+            }
+        } catch (Exception e) {
+            System.out.println("[DEBUG] Error en getPerfil: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
+    }
+    
+    @PutMapping("/perfil")
+    public ResponseEntity<Usuario> actualizarPerfil(@RequestBody PerfilUsuarioDTO perfilDTO) {
+        System.out.println("[DEBUG] Iniciando actualizarPerfil");
+        try {
+            // Obtener autenticación directamente del contexto de seguridad
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            
+            if (authentication == null || !authentication.isAuthenticated() 
+                || authentication.getPrincipal().equals("anonymousUser")) {
+                System.out.println("[DEBUG] actualizarPerfil - Usuario no autenticado o anónimo");
+                return ResponseEntity.status(401).build();
+            }
+            
+            String email = authentication.getName();
+            System.out.println("[DEBUG] actualizarPerfil - Email encontrado: " + email);
+            
+            Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email);
+            
+            if (usuarioOpt.isEmpty()) {
+                System.out.println("[DEBUG] actualizarPerfil - No se encontró usuario con email: " + email);
+                return ResponseEntity.status(401).build();
+            }
+            
+            Usuario usuario = usuarioOpt.get();
+            
+            if (perfilDTO.getTelefono() != null) {
+                usuario.setTelefono(perfilDTO.getTelefono());
+            }
+            
+            if (perfilDTO.getDireccion() != null) {
+                usuario.setDireccion(perfilDTO.getDireccion());
+            }
+            
+            usuario = usuarioRepository.save(usuario);
+            
+            System.out.println("[DEBUG] actualizarPerfil - Usuario actualizado: " + usuario.getEmail());
+            return ResponseEntity.ok(usuario);
+        } catch (Exception e) {
+            System.out.println("[DEBUG] Error en actualizarPerfil: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
     }
 }
 

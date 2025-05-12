@@ -23,7 +23,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return User
                 .withUsername(usuario.getEmail())
                 .password(usuario.getPassword()) // ⚠️ debe estar encriptada (BCrypt)
-                .roles(usuario.getRol().getNombre()) // usa String: "admin", "superadmin"
+                .roles(usuario.getRol().getNombre().toUpperCase()) // fuerza mayúsculas para compatibilidad Spring Security
                 .build();
     }
 }
