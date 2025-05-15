@@ -1,7 +1,10 @@
 package com.example.deporsm.controller;
 
+import com.example.deporsm.dto.ActualizarPerfilDTO;
+import com.example.deporsm.dto.CambioPasswordDTO;
 import com.example.deporsm.dto.CoordinadorDTO;
 import com.example.deporsm.dto.PerfilUsuarioDTO;
+import com.example.deporsm.dto.PreferenciasNotificacionDTO;
 import com.example.deporsm.model.Usuario;
 import com.example.deporsm.repository.UsuarioRepository;
 import com.example.deporsm.service.UsuarioService;
@@ -113,6 +116,66 @@ public class UsuarioController {
             System.out.println("[DEBUG] Error en actualizarPerfil: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).build();
+        }
+    }
+
+    @PutMapping("/actualizar-perfil")
+    public ResponseEntity<?> actualizarPerfil(@RequestBody ActualizarPerfilDTO perfilDTO) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() 
+            || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body("Usuario no autenticado");
+        }
+        
+        String email = authentication.getName();
+        try {
+            usuarioService.actualizarPerfil(email, perfilDTO);
+            return ResponseEntity.ok().body("Perfil actualizado correctamente");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error al actualizar el perfil: " + e.getMessage());
+        }
+    }
+    
+    @PutMapping("/cambiar-password")
+    public ResponseEntity<?> cambiarPassword(@RequestBody CambioPasswordDTO cambioPasswordDTO) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() 
+            || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body("Usuario no autenticado");
+        }
+        
+        String email = authentication.getName();
+        try {
+            if (!cambioPasswordDTO.getPasswordNueva().equals(cambioPasswordDTO.getConfirmacionPassword())) {
+                return ResponseEntity.badRequest().body("Las contraseñas no coinciden");
+            }
+            
+            usuarioService.cambiarPassword(email, cambioPasswordDTO);
+            return ResponseEntity.ok().body("Contraseña actualizada correctamente");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error al cambiar la contraseña: " + e.getMessage());
+        }
+    }
+    
+    @PutMapping("/preferencias-notificaciones")
+    public ResponseEntity<?> actualizarPreferenciasNotificaciones(
+            @RequestBody PreferenciasNotificacionDTO preferenciasDTO) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() 
+            || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body("Usuario no autenticado");
+        }
+        
+        String email = authentication.getName();
+        try {
+            usuarioService.actualizarPreferenciasNotificaciones(email, preferenciasDTO);
+            return ResponseEntity.ok().body("Preferencias de notificaciones actualizadas correctamente");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                .body("Error al actualizar las preferencias de notificaciones: " + e.getMessage());
         }
     }
 }

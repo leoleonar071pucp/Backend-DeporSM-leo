@@ -27,9 +27,7 @@ public class Instalacion {
 
     private String tipo;
 
-    private Integer capacidad;
-
-    @Column(name = "horario_apertura")
+    private Integer capacidad;    @Column(name = "horario_apertura")
     private Time horarioApertura;
 
     @Column(name = "horario_cierre")
@@ -40,6 +38,8 @@ public class Instalacion {
 
     @Column(name = "precio")
     private float precio;
+    
+    private String horario;
 
     private Boolean activo;
 
@@ -61,4 +61,20 @@ public class Instalacion {
     @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<MantenimientoInstalacion> mantenimientos;
+      // Nuevas relaciones
+    @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<CaracteristicaInstalacion> caracteristicas;
+    
+    @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<ComodidadInstalacion> comodidades;
+    
+    @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<ReglaInstalacion> reglas;
+    
+    @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<HorarioDisponible> horariosDisponibles;
 }

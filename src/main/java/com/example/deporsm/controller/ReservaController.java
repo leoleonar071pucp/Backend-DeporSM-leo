@@ -1,11 +1,16 @@
 package com.example.deporsm.controller;
 
+import com.example.deporsm.dto.CrearReservaDTO;
 import com.example.deporsm.dto.DashboardStatsDTO;
 import com.example.deporsm.dto.ReservaListDTO;
 import com.example.deporsm.dto.ReservaRecienteDTO;
 import com.example.deporsm.model.Reserva;
 import com.example.deporsm.repository.ReservaRepository;
+import com.example.deporsm.service.ReservaService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +22,9 @@ public class ReservaController {
 
     @Autowired
     private ReservaRepository reservaRepository;
+    
+    @Autowired
+    private ReservaService reservaService;
 
     @GetMapping("/usuario/{dni}")
     public List<ReservaListDTO> obtenerReservasPorUsuario(@PathVariable String dni) {
@@ -49,6 +57,65 @@ public class ReservaController {
         return reservaRepository.obtenerReservasRecientes();
     }
 
-
-
+    /**
+     * Crea una nueva reserva para el usuario autenticado
+     */
+    @PostMapping
+    public ResponseEntity<?> crearReserva(@RequestBody CrearReservaDTO reservaDTO) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() 
+            || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body("Usuario no autenticado");
+        }
+        
+        String email = authentication.getName();
+        try {
+            Reserva reservaCreada = reservaService.crearReserva(email, reservaDTO);
+            return ResponseEntity.ok(reservaCreada);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error al crear reserva: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Cancela una reserva
+     */
+    @PutMapping("/{id}/cancelar")
+    public ResponseEntity<?> cancelarReserva(@PathVariable Integer id, @RequestParam(required = false) String motivo) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() 
+            || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body("Usuario no autenticado");
+        }
+        
+        String email = authentication.getName();
+        try {
+            reservaService.cancelarReserva(id, email, motivo);
+            return ResponseEntity.ok("Reserva cancelada correctamente");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error al cancelar reserva: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Obtiene el historial de reservas del usuario autenticado
+     */
+    @GetMapping("/historial")
+    public ResponseEntity<?> historialReservas() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() 
+            || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body("Usuario no autenticado");
+        }
+        
+        String email = authentication.getName();
+        try {
+            return ResponseEntity.ok(reservaService.obtenerHistorialReservas(email));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error al obtener historial: " + e.getMessage());
+        }
+    }
 }

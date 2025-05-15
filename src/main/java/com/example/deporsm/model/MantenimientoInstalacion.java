@@ -1,5 +1,6 @@
 package com.example.deporsm.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -15,13 +16,10 @@ public class MantenimientoInstalacion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
+    private Integer id;    @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-
+    @JsonIgnore
     @JoinColumn(name = "instalacion_id", nullable = false)
-
     private Instalacion instalacion;
 
     @Column(name = "fecha_inicio", nullable = false)

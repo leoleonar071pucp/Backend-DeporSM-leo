@@ -1,5 +1,5 @@
 package com.example.deporsm.model;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,10 +20,9 @@ public class Reserva {
 
     @ManyToOne
     @JoinColumn(name = "usuario_id")
-    private Usuario usuario;
-
-    @ManyToOne
+    private Usuario usuario;    @ManyToOne
     @JoinColumn(name = "instalacion_id")
+    @JsonIgnore
     private Instalacion instalacion;
 
     @Column(name="fecha")

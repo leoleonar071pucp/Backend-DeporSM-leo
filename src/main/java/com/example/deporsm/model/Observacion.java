@@ -1,5 +1,6 @@
 package com.example.deporsm.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,10 +15,9 @@ public class Observacion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
-    @ManyToOne
+    private Integer id;    @ManyToOne
     @JoinColumn(name = "instalacion_id")
+    @JsonIgnore
     private Instalacion instalacion;
 
     @ManyToOne
