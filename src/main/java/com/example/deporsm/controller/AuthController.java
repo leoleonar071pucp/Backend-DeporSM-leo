@@ -40,11 +40,12 @@ public class AuthController {
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword());
 
             Authentication authentication = authenticationManager.authenticate(authToken);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            // Forzar la creación de una sesión si no existe
+            SecurityContextHolder.getContext().setAuthentication(authentication);            // Forzar la creación de una sesión si no existe
             HttpSession session = servletRequest.getSession(true);
-            session.setMaxInactiveInterval(3600); // Sesión válida por 1 hora
+            session.setMaxInactiveInterval(86400); // Sesión válida por 24 horas (86400 segundos)
+            
+            // Guardar explícitamente el contexto de seguridad en la sesión para mejor persistencia
+            session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
 
             Usuario usuario = authService.findByEmail(request.getEmail());
 

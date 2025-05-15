@@ -66,9 +66,8 @@ public class SecurityConfig {
                             response.setHeader("Access-Control-Allow-Credentials", "true");
                             response.setStatus(HttpServletResponse.SC_OK);
                         })
-                )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
+                )                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                         .maximumSessions(1)
                         .sessionRegistry(sessionRegistry())
                 );
@@ -109,23 +108,21 @@ public class SecurityConfig {
         return new HttpSessionEventPublisher();
     }
     
-    // Configuración para cookies
-    @Bean
+    // Configuración para cookies    @Bean
     public ServletContextInitializer cookieConfigurer() {
         return servletContext -> {
             var sessionCookieConfig = servletContext.getSessionCookieConfig();
             sessionCookieConfig.setHttpOnly(true);
             sessionCookieConfig.setSecure(false); // False para desarrollo local
-            sessionCookieConfig.setMaxAge(3600); // 1 hora
+            sessionCookieConfig.setMaxAge(86400); // 24 horas para mayor duración
+            sessionCookieConfig.setName("JSESSIONID"); // Asegurarse que el nombre sea consistente
         };
-    }
-
-    // Configuración para permitir cookies en peticiones cross-origin
+    }// Configuración para permitir cookies en peticiones cross-origin
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> cookieProcessorCustomizer() {
         return factory -> factory.addContextCustomizers(context -> {
             Rfc6265CookieProcessor processor = new Rfc6265CookieProcessor();
-            processor.setSameSiteCookies("None"); // Cambiado a None para permitir cross-origin
+            processor.setSameSiteCookies("Lax"); // Cambiado a Lax para mejor compatibilidad
             context.setCookieProcessor(processor);
         });
     }
