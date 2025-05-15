@@ -12,6 +12,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.sql.Timestamp;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -92,11 +93,19 @@ public class ReservaService {
         } else {
             reserva.setEstadoPago("pendiente"); // El pago comienza como pendiente por defecto
         }
-        
-        // Guardar método de pago si viene proporcionado
+          // Guardar método de pago si viene proporcionado
         if (reservaDTO.getMetodoPago() != null && !reservaDTO.getMetodoPago().isEmpty()) {
             // Asumiendo que has agregado este getter y setter a la entidad Reserva
             reserva.setMetodoPago(reservaDTO.getMetodoPago());
+        }
+        
+        // Asegurar que las marcas de tiempo se establezcan correctamente
+        Timestamp currentTimestamp = new Timestamp(System.currentTimeMillis());
+        if (reserva.getCreatedAt() == null) {
+            reserva.setCreatedAt(currentTimestamp);
+        }
+        if (reserva.getUpdatedAt() == null) {
+            reserva.setUpdatedAt(currentTimestamp);
         }
         
         // Guardar y devolver
@@ -144,7 +153,7 @@ public class ReservaService {
         // Guardar la reserva actualizada
         reservaRepository.save(reserva);
     }
-      /**
+    /**
      * Obtiene el historial de reservas de un usuario
      * @param email Email del usuario
      * @return Lista de reservas del usuario
@@ -152,13 +161,14 @@ public class ReservaService {
     public List<ReservaListDTO> obtenerHistorialReservas(String email) {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-          // Usamos JPQL con proyección para evitar los campos problemáticos e incluir ubicación y método de pago
+          // Usamos JPQL con proyección para evitar los campos problemáticos e incluir ubicación, método de pago e imagen
         String jpql = "SELECT new com.example.deporsm.dto.ReservaListDTO(" +
                 "r.id, " +
                 "u.nombre, " +
                 "i.nombre, " +
                 "i.ubicacion, " +
                 "r.metodoPago, " +
+                "i.imagenUrl, " +
                 "r.fecha, " +
                 "r.horaInicio, " +
                 "r.horaFin, " +

@@ -38,6 +38,7 @@ public class ReservaController {
                             reserva.getInstalacion().getNombre(),
                             reserva.getInstalacion().getUbicacion(), // Incluir ubicación
                             reserva.getMetodoPago(),                // Incluir método de pago
+                            reserva.getInstalacion().getImagenUrl(), // Incluir URL de imagen
                             reserva.getFecha(),
                             reserva.getHoraInicio(),
                             reserva.getHoraFin(),

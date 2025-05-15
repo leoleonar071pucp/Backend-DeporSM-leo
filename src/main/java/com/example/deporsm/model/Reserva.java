@@ -3,6 +3,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.sql.Date;
 import java.sql.Time;
@@ -48,11 +50,24 @@ public class Reserva {
     private String estadoPago;
     
     @Column(name = "metodo_pago") // Nuevo campo para el método de pago
-    private String metodoPago;
-
+    private String metodoPago;    @CreationTimestamp
     @Column(name = "created_at")
-    private Timestamp createdAt;
-
+    private Timestamp createdAt;    @UpdateTimestamp
     @Column(name = "updated_at")
     private Timestamp updatedAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = new Timestamp(System.currentTimeMillis());
+        }
+        if (this.updatedAt == null) {
+            this.updatedAt = new Timestamp(System.currentTimeMillis());
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = new Timestamp(System.currentTimeMillis());
+    }
 }

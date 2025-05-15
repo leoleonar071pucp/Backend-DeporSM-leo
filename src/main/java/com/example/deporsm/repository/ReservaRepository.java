@@ -19,6 +19,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
             "i.nombre, " +
             "i.ubicacion, " +
             "r.metodoPago, " +
+            "i.imagenUrl, " +
             "r.fecha, " +
             "r.horaInicio, " +
             "r.horaFin, " +
