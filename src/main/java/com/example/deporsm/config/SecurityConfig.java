@@ -45,12 +45,14 @@ public class SecurityConfig {
                 // Agregar el filtro de depuración primero
                 .addFilterBefore(authDebugFilter, UsernamePasswordAuthenticationFilter.class)
                 // Agregar el filtro CORS después
-                .addFilterBefore(corsFilter, UsernamePasswordAuthenticationFilter.class)
-                .authorizeHttpRequests(auth -> auth
+                .addFilterBefore(corsFilter, UsernamePasswordAuthenticationFilter.class)                .authorizeHttpRequests(auth -> auth
                         // Permitir OPTIONS sin autenticación (preflight)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Permitir explícitamente el endpoint de logout
                         .requestMatchers("/api/auth/logout").permitAll()
+                        // Asegurarse de que los recursos estáticos estén completamente permitidos
+                        .requestMatchers("/comprobantes/**").permitAll()
+                        .requestMatchers("/static/**").permitAll()
                         // Permitir todas las rutas sin autorización estricta (para depuración)
                         .anyRequest().permitAll()
                 )
@@ -107,8 +109,7 @@ public class SecurityConfig {
     public HttpSessionEventPublisher httpSessionEventPublisher() {
         return new HttpSessionEventPublisher();
     }
-    
-    // Configuración para cookies    @Bean
+      // Configuración para cookies    @Bean
     public ServletContextInitializer cookieConfigurer() {
         return servletContext -> {
             var sessionCookieConfig = servletContext.getSessionCookieConfig();
@@ -117,7 +118,9 @@ public class SecurityConfig {
             sessionCookieConfig.setMaxAge(86400); // 24 horas para mayor duración
             sessionCookieConfig.setName("JSESSIONID"); // Asegurarse que el nombre sea consistente
         };
-    }// Configuración para permitir cookies en peticiones cross-origin
+    }
+    
+    // Configuración para permitir cookies en peticiones cross-origin
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> cookieProcessorCustomizer() {
         return factory -> factory.addContextCustomizers(context -> {

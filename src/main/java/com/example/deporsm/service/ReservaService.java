@@ -12,7 +12,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.sql.Timestamp;
+import java.math.BigDecimal;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,6 +33,8 @@ public class ReservaService {
     
     @PersistenceContext
     private EntityManager entityManager;
+      @Autowired
+    private PagoService pagoService;
     
     /**
      * Crea una nueva reserva para un usuario
@@ -40,6 +44,7 @@ public class ReservaService {
      * @throws RuntimeException si no se encuentra el usuario o la instalación,
      *         o si la instalación no está disponible
      */
+    @Transactional
     public Reserva crearReserva(String email, CrearReservaDTO reservaDTO) {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
@@ -60,7 +65,9 @@ public class ReservaService {
         
         if (!horarioDisponible) {
             throw new RuntimeException("El horario seleccionado no está disponible");
-        }        // Crear la reserva
+        }
+        
+        // Crear la reserva
         Reserva reserva = new Reserva();
         reserva.setUsuario(usuario);
         reserva.setInstalacion(instalacion);
@@ -92,24 +99,40 @@ public class ReservaService {
             reserva.setEstadoPago(reservaDTO.getEstadoPago()); // Estado de pago personalizado
         } else {
             reserva.setEstadoPago("pendiente"); // El pago comienza como pendiente por defecto
-        }
-          // Guardar método de pago si viene proporcionado
+        }        // Guardar método de pago si viene proporcionado
         if (reservaDTO.getMetodoPago() != null && !reservaDTO.getMetodoPago().isEmpty()) {
             // Asumiendo que has agregado este getter y setter a la entidad Reserva
             reserva.setMetodoPago(reservaDTO.getMetodoPago());
         }
+          // Guardar la reserva primero para obtener su ID
+        Reserva reservaGuardada = reservaRepository.save(reserva);
+          // Crear un registro de pago automáticamente
+        try {
+            // Obtener el precio de la instalación y convertirlo a BigDecimal
+            BigDecimal precio = BigDecimal.valueOf(instalacion.getPrecio());
+            
+            if ("online".equals(reserva.getMetodoPago()) && "pagado".equals(reserva.getEstadoPago())) {
+                // Para pagos online, generar una referencia y simular los últimos 4 dígitos
+                String referencia = "TRX-" + System.currentTimeMillis();
+                String ultimosDigitos = String.format("%04d", (int)(Math.random() * 10000));
+                pagoService.crearPagoOnline(reservaGuardada.getId(), precio, referencia, ultimosDigitos);
+            }
+            // Los pagos por depósito se crearán después cuando el usuario suba el comprobante
+        } catch (Exception e) {
+            System.err.println("Error al crear el registro de pago: " + e.getMessage());
+            // No detenemos el proceso aunque falle la creación del pago
+        }
         
-        // Asegurar que las marcas de tiempo se establezcan correctamente
+        // Asegurar timestamps en la reserva
         Timestamp currentTimestamp = new Timestamp(System.currentTimeMillis());
-        if (reserva.getCreatedAt() == null) {
-            reserva.setCreatedAt(currentTimestamp);
+        if (reservaGuardada.getCreatedAt() == null) {
+            reservaGuardada.setCreatedAt(currentTimestamp);
+            reservaGuardada = reservaRepository.save(reservaGuardada);
         }
-        if (reserva.getUpdatedAt() == null) {
-            reserva.setUpdatedAt(currentTimestamp);
-        }
-        
-        // Guardar y devolver
-        return reservaRepository.save(reserva);
+        if (reservaGuardada.getUpdatedAt() == null) {
+            reservaGuardada.setUpdatedAt(currentTimestamp);
+            reservaGuardada = reservaRepository.save(reservaGuardada);
+        }return reservaGuardada;
     }
     
     /**
