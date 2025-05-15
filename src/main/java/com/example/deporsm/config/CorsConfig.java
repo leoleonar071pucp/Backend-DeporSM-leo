@@ -8,6 +8,8 @@ import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.util.List;
+
 @Configuration
 public class CorsConfig {
       @Bean
@@ -16,7 +18,7 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:3000")
+                        .allowedOrigins("*")  // ⚠️ solo si el backend no maneja cookies ni seguridad
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")  // Métodos específicos
                         .allowedHeaders("*")
                         .exposedHeaders("Set-Cookie", "Authorization", "Content-Type")
@@ -30,21 +32,16 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
-        
-        config.setAllowCredentials(true);
-        config.addAllowedOrigin("http://localhost:3000");
-        config.addAllowedHeader("*");
-        config.addExposedHeader("Set-Cookie");
-        config.addExposedHeader("Authorization");
-        config.addExposedHeader("Content-Type");
-        config.addAllowedMethod("GET");
-        config.addAllowedMethod("POST");
-        config.addAllowedMethod("PUT");
-        config.addAllowedMethod("DELETE");
-        config.addAllowedMethod("OPTIONS");
-        config.setMaxAge(86400L); // 24 horas
-        
+
+        config.setAllowedOrigins(List.of("*"));  // Permitir todos los orígenes
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowCredentials(false); // ✅ obligatorio si usas "*"
+        config.setMaxAge(86400L);
+
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }
+
 }
