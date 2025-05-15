@@ -32,22 +32,23 @@ public class Reserva {
     private Time horaInicio;
 
     @Column(name = "hora_fin")
-    private Time horaFin;
-
-    @Column(name="estado")
+    private Time horaFin;    @Column(name="estado")
     private String estado;
-
-    @Column(name="motivo")
+    
+    // Estos campos no existen en la base de datos pero los mantenemos en el modelo
+    // Como transientes para no afectar el código existente
+    @Transient
     private String motivo;
 
-    @Column(name = "numero_asistentes")
+    @Transient
     private Integer numeroAsistentes;
 
     @Column(name="comentarios")
-    private String comentarios;
-
-    @Column(name = "estado_pago") // Corregido a estado_pago en la base de datos
+    private String comentarios;    @Column(name = "estado_pago") // Corregido a estado_pago en la base de datos
     private String estadoPago;
+    
+    @Column(name = "metodo_pago") // Nuevo campo para el método de pago
+    private String metodoPago;
 
     @Column(name = "created_at")
     private Timestamp createdAt;
