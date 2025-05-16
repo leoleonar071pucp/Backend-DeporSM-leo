@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/instalaciones")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class InstalacionesController {
     private final InstalacionRepository repository;
     private final CaracteristicaInstalacionRepository caracteristicaRepository;
@@ -125,11 +125,9 @@ public class InstalacionesController {
             nuevaInstalacion.setUbicacion(request.getUbicacion());
             nuevaInstalacion.setTipo(request.getTipo());
             nuevaInstalacion.setCapacidad(request.getCapacidad());
-            nuevaInstalacion.setHorarioApertura(request.getHorarioApertura());
-            nuevaInstalacion.setHorarioCierre(request.getHorarioCierre());
+            nuevaInstalacion.setHorarioApertura(request.getHorarioApertura());            nuevaInstalacion.setHorarioCierre(request.getHorarioCierre());
             nuevaInstalacion.setImagenUrl(request.getImagenUrl());
             nuevaInstalacion.setPrecio(request.getPrecio());
-            nuevaInstalacion.setHorario(request.getHorario());
             nuevaInstalacion.setCreatedAt(now);
             nuevaInstalacion.setUpdatedAt(now);
             
@@ -218,11 +216,9 @@ public class InstalacionesController {
                         detalleDTO.setTipo(instalacion.getTipo());
                         detalleDTO.setCapacidad(instalacion.getCapacidad());
                         detalleDTO.setHorarioApertura(instalacion.getHorarioApertura());
-                        detalleDTO.setHorarioCierre(instalacion.getHorarioCierre());
-                        detalleDTO.setImagenUrl(instalacion.getImagenUrl());
+                        detalleDTO.setHorarioCierre(instalacion.getHorarioCierre());                        detalleDTO.setImagenUrl(instalacion.getImagenUrl());
                         detalleDTO.setPrecio(instalacion.getPrecio());
                         detalleDTO.setActivo(instalacion.getActivo());
-                        detalleDTO.setHorario(instalacion.getHorario());
                         
                         // Verificar si está en mantenimiento (implementación simplificada)
                         detalleDTO.setEstado(instalacion.getActivo() ? "disponible" : "no disponible");
@@ -344,11 +340,9 @@ public class InstalacionesController {
                     instalacion.getUbicacion(),
                     instalacion.getTipo(),
                     instalacion.getCapacidad(),
-                    instalacion.getHorarioApertura(),
-                    instalacion.getHorarioCierre(),
+                    instalacion.getHorarioApertura(),                    instalacion.getHorarioCierre(),
                     instalacion.getImagenUrl(),
                     instalacion.getPrecio(),
-                    instalacion.getHorario(),
                     instalacion.getActivo(),
                     instalacion.getCreatedAt(),
                     instalacion.getUpdatedAt()

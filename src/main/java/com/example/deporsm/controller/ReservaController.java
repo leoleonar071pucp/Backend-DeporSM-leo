@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/reservas")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class ReservaController {
 
     @Autowired

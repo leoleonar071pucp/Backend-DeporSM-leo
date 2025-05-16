@@ -22,13 +22,11 @@ public class InstalacionDetalleDTO {
     private Time horarioApertura;
     private Time horarioCierre;
     private String imagenUrl;
-    private float precio;
-    private Boolean activo;
+    private float precio;    private Boolean activo;
     private String estado; // "disponible", "mantenimiento", "ocupada"
     private String coordenadas; // Para mostrar en mapa
     
     // Nuevos campos
-    private String horario;
     private List<String> caracteristicas;
     private List<String> comodidades;
     private List<String> reglas;

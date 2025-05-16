@@ -18,12 +18,10 @@ public class InstalacionRequestDTO {
     private String ubicacion;
     private String tipo;
     private Integer capacidad;
-    private Time horarioApertura;
-    private Time horarioCierre;
+    private Time horarioApertura;    private Time horarioCierre;
     private String imagenUrl;
     private float precio;
     private Boolean activo;
-    private String horario;
     
     // Listas para las características, comodidades y reglas
     private List<String> caracteristicas;

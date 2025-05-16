@@ -1,14 +1,12 @@
-package com.example.deporsm.controller;
-
-// This file has been deprecated and replaced by com.example.deporsm.service.AuthService
-// Keeping this file temporarily as a reference, but it should be removed in the future
+package com.example.deporsm.service;
 
 import com.example.deporsm.model.Usuario;
 import com.example.deporsm.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
 
-// @Service annotation removed to prevent bean definition conflicts
+@Service
 public class AuthService {
 
     @Autowired
@@ -30,10 +28,19 @@ public class AuthService {
 
         return usuario;
     }
-
+    
+    /**
+     * Busca un usuario por su email
+     * @param email Email del usuario
+     * @return Usuario encontrado
+     * @throws RuntimeException si no existe el usuario
+     */
     public Usuario findByEmail(String email) {
         return usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
     }
 
+    public void logout() {
+        // Lógica para logout si se requiere a nivel de servicio
+    }
 }
