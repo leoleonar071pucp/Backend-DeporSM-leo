@@ -30,17 +30,16 @@ public class Observacion {
 
     private String estado;
 
-    private String prioridad;
-
-    @Column(name = "fecha_resolucion")
+    private String prioridad;    @Column(name = "fecha_resolucion")
     private Timestamp fechaResolucion;
 
     @ManyToOne
-    @JoinColumn(name = "resuelto_por ")
-    private Usuario resueltoPor;
-
-    @Column(name = "comentario_resolucion", columnDefinition = "TEXT")
+    @JoinColumn(name = "resuelto_por")
+    private Usuario resueltoPor;    @Column(name = "comentario_resolucion", columnDefinition = "TEXT")
     private String comentarioResolucion;
+    
+    @Column(name = "fotos_url", columnDefinition = "TEXT")
+    private String fotosUrl;
 
     @Column(name = "created_at")
     private Timestamp createdAt;

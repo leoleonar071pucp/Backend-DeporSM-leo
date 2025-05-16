@@ -23,24 +23,26 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/instalaciones")
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
-public class InstalacionesController {
-    private final InstalacionRepository repository;
+public class InstalacionesController {    private final InstalacionRepository repository;
     private final CaracteristicaInstalacionRepository caracteristicaRepository;
     private final ComodidadInstalacionRepository comodidadRepository;
     private final ReglaInstalacionRepository reglaRepository;
     private final HorarioDisponibleRepository horarioDisponibleRepository;
+    private final CoordinadorInstalacionRepository coordinadorInstalacionRepository;
 
     public InstalacionesController(
             InstalacionRepository repository,
             CaracteristicaInstalacionRepository caracteristicaRepository,
             ComodidadInstalacionRepository comodidadRepository,
             ReglaInstalacionRepository reglaRepository,
-            HorarioDisponibleRepository horarioDisponibleRepository) {
+            HorarioDisponibleRepository horarioDisponibleRepository,
+            CoordinadorInstalacionRepository coordinadorInstalacionRepository) {
         this.repository = repository;
         this.caracteristicaRepository = caracteristicaRepository;
         this.comodidadRepository = comodidadRepository;
         this.reglaRepository = reglaRepository;
         this.horarioDisponibleRepository = horarioDisponibleRepository;
+        this.coordinadorInstalacionRepository = coordinadorInstalacionRepository;
     }
 
     @GetMapping
@@ -430,10 +432,46 @@ public class InstalacionesController {
                         
                         return ResponseEntity.ok(horariosDTO);
                     })
-                    .orElse(ResponseEntity.notFound().build());
-        } catch (Exception e) {
+                    .orElse(ResponseEntity.notFound().build());        } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body("Error al obtener horarios disponibles: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Obtiene las instalaciones asignadas a un coordinador específico
+     */
+    @GetMapping("/coordinador/{coordinadorId}")
+    public ResponseEntity<?> obtenerInstalacionesPorCoordinador(@PathVariable Integer coordinadorId) {
+        try {
+            // Obtener las asignaciones del coordinador
+            List<CoordinadorInstalacion> asignaciones = coordinadorInstalacionRepository.findByUsuarioId(coordinadorId);
+            
+            if (asignaciones.isEmpty()) {
+                return ResponseEntity.ok(new ArrayList<>());
+            }
+            
+            // Extraer las instalaciones de las asignaciones
+            List<Instalacion> instalaciones = asignaciones.stream()
+                .map(CoordinadorInstalacion::getInstalacion)
+                .collect(Collectors.toList());
+            
+            // Convertir a DTO simplificado para la respuesta
+            List<Map<String, Object>> instalacionesDTO = instalaciones.stream()
+                .map(instalacion -> {
+                    Map<String, Object> dto = new HashMap<>();
+                    dto.put("id", instalacion.getId());
+                    dto.put("nombre", instalacion.getNombre());
+                    dto.put("tipo", instalacion.getTipo());
+                    dto.put("ubicacion", instalacion.getUbicacion());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(instalacionesDTO);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body("Error al obtener instalaciones del coordinador: " + e.getMessage());
         }
     }
 }
