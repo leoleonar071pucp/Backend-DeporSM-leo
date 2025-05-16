@@ -10,18 +10,15 @@ public class InstalacionListDTO {
     private String ubicacion;
     private String tipo;
     private Integer capacidad;
-    private Time horarioApertura;
-    private Time horarioCierre;
+    private Time horarioApertura;    private Time horarioCierre;
     private String imagenUrl;
     private float precio;
-    private String horario;
     private Boolean activo;
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
-    public InstalacionListDTO(Integer id, String nombre, String descripcion, String ubicacion,
-                          String tipo, Integer capacidad, Time horarioApertura, Time horarioCierre,
-                          String imagenUrl, float precio, String horario, Boolean activo, 
+    public InstalacionListDTO(Integer id, String nombre, String descripcion, String ubicacion,                          String tipo, Integer capacidad, Time horarioApertura, Time horarioCierre,
+                          String imagenUrl, float precio, Boolean activo, 
                           Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.nombre = nombre;
@@ -29,11 +26,9 @@ public class InstalacionListDTO {
         this.ubicacion = ubicacion;
         this.tipo = tipo;
         this.capacidad = capacidad;
-        this.horarioApertura = horarioApertura;
-        this.horarioCierre = horarioCierre;
+        this.horarioApertura = horarioApertura;        this.horarioCierre = horarioCierre;
         this.imagenUrl = imagenUrl;
         this.precio = precio;
-        this.horario = horario;
         this.activo = activo;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -46,11 +41,9 @@ public class InstalacionListDTO {
     public String getUbicacion() { return ubicacion; }
     public String getTipo() { return tipo; }
     public Integer getCapacidad() { return capacidad; }
-    public Time getHorarioApertura() { return horarioApertura; }
-    public Time getHorarioCierre() { return horarioCierre; }
+    public Time getHorarioApertura() { return horarioApertura; }    public Time getHorarioCierre() { return horarioCierre; }
     public String getImagenUrl() { return imagenUrl; }
     public float getPrecio() { return precio; }
-    public String getHorario() { return horario; }
     public Boolean getActivo() { return activo; }
     public Timestamp getCreatedAt() { return createdAt; }
     public Timestamp getUpdatedAt() { return updatedAt; }

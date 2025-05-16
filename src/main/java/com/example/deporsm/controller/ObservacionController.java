@@ -11,6 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/observaciones")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class ObservacionController {
 
     @Autowired
@@ -26,8 +27,10 @@ public class ObservacionController {
         return observacionRepository.findObservacionesRecientes();
     }
 
-
-
+    @GetMapping("/coordinador/{id}")
+    public List<ObservacionDTO> listarObservacionesPorCoordinador(@PathVariable("id") Integer coordinadorId) {
+        return observacionRepository.findObservacionesDTOByCoordinadorId(coordinadorId);
+    }
 }
 
 

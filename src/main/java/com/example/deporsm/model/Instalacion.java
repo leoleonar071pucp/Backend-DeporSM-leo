@@ -34,12 +34,8 @@ public class Instalacion {
     private Time horarioCierre;
 
     @Column(name = "imagen_url")
-    private String imagenUrl;
-
-    @Column(name = "precio")
+    private String imagenUrl;    @Column(name = "precio")
     private float precio;
-    
-    private String horario;
 
     private Boolean activo;
 

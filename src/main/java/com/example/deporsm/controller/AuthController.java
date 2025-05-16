@@ -23,10 +23,9 @@ import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/auth")
-public class AuthController {
-
-    @Autowired
-    private AuthService authService;
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+public class AuthController {    @Autowired
+    private com.example.deporsm.service.AuthService authService;
 
     @Autowired
     private AuthenticationManager authenticationManager;
