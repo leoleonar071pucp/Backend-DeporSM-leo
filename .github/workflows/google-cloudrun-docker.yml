@@ -41,6 +41,6 @@ jobs:
           region: '${{ env.REGION }}'
           image: '${{ env.IMAGE }}'
           env_vars: |
-            SPRING_DATASOURCE_URL=jdbc:mysql:///mysqldeporsm?cloudSqlInstance=logical-pathway-459914-i3:us-central1:mysqldeporsm&socketFactory=com.google.cloud.sql.mysql.SocketFactory&useSSL=false
+            SPRING_DATASOURCE_URL=jdbc:mysql:///deportes_sm?cloudSqlInstance=logical-pathway-459914-i3:us-central1:mysqldeporsm&socketFactory=com.google.cloud.sql.mysql.SocketFactory&useSSL=false
             SPRING_DATASOURCE_USERNAME=user
             SPRING_DATASOURCE_PASSWORD=gatoswapos123-
