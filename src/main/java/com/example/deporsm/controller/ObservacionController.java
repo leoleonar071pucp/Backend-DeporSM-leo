@@ -27,8 +27,10 @@ public class ObservacionController {
         return observacionRepository.findObservacionesRecientes();
     }
 
-
-
+    @GetMapping("/coordinador/{id}")
+    public List<ObservacionDTO> listarObservacionesPorCoordinador(@PathVariable("id") Integer coordinadorId) {
+        return observacionRepository.findObservacionesDTOByCoordinadorId(coordinadorId);
+    }
 }
 
 
