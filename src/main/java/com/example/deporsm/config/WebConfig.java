@@ -10,9 +10,14 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("https://deporsm-apiwith-1035693188565.us-central1.run.app", 
-                               "https://frontend-depor-sm-pyrv6rxh1-leonardo-pucps-projects.vercel.app", 
-                               "http://localhost:3000")
+                                // ...existing code...
+                .allowedOrigins(
+                    "https://deporsm-apiwith-1035693188565.us-central1.run.app",
+                    "https://frontend-depor-sm-pyrv6rxh1-leonardo-pucps-projects.vercel.app",
+                    "https://frontend-depor-sm-leo.vercel.app", // <-- Agrega esta línea
+                    "http://localhost:3000"
+                )
+                // ...existing code...
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders("Set-Cookie", "Authorization", "Content-Type")
