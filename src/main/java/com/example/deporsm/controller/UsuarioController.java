@@ -283,9 +283,7 @@ public class UsuarioController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error al reactivar vecino: " + e.getMessage());
         }
-    }
-
-    @GetMapping("/allAdministradores")
+    }    @GetMapping("/allAdministradores")
     public ResponseEntity<List<AdministradorDTO>> listarAdministradores() {
         System.out.println("[DEBUG] Iniciando listarAdministradores");
         try {
@@ -350,8 +348,7 @@ public class UsuarioController {
     public ResponseEntity<?> desactivarAdministrador(@PathVariable Integer id) {
         try {
             // Verificar si el usuario actual es superadmin
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !authentication.isAuthenticated() 
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();            if (authentication == null || !authentication.isAuthenticated() 
                 || !authentication.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"))) {
                 return ResponseEntity.status(403).body("No tienes permisos para desactivar administradores");
