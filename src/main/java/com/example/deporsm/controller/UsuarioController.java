@@ -287,6 +287,15 @@ public class UsuarioController {
     public ResponseEntity<List<AdministradorDTO>> listarAdministradores() {
         System.out.println("[DEBUG] Iniciando listarAdministradores");
         try {
+            // Verificar si el usuario actual es superadmin
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated() 
+                || !authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"))) {
+                System.out.println("[DEBUG] listarAdministradores - Acceso denegado: no es superadmin");
+                return ResponseEntity.status(403).build();
+            }
+
             List<AdministradorDTO> admins = usuarioService.listarAdministradores();
             
             if (admins == null || admins.isEmpty()) {
