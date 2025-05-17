@@ -11,8 +11,14 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/health")
-@CrossOrigin(origins = "https://deporsm-apiwith-1035693188565.us-central1.run.app", allowCredentials = "true")
-public class HealthCheckController {
+@CrossOrigin(
+  origins = {
+    "https://deporsm-apiwith-1035693188565.us-central1.run.app",
+    "https://frontend-depor-sm-leo.vercel.app",
+    "http://localhost:3000"
+  },
+  allowCredentials = "true"
+)public class HealthCheckController {
 
     @GetMapping("")
     public ResponseEntity<Map<String, Object>> checkHealth() {

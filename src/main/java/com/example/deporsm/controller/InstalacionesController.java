@@ -22,7 +22,15 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/instalaciones")
-@CrossOrigin(origins = "https://deporsm-apiwith-1035693188565.us-central1.run.app", allowCredentials = "true")
+@CrossOrigin(
+  origins = {
+    "https://deporsm-apiwith-1035693188565.us-central1.run.app",
+    "https://frontend-depor-sm-leo.vercel.app",
+    "http://localhost:3000"
+  },
+  allowCredentials = "true"
+)
+
 public class InstalacionesController {
     
     private final InstalacionRepository repository;

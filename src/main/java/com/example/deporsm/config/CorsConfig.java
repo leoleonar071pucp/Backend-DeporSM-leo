@@ -10,20 +10,19 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class CorsConfig {
+
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        // ...existing code...
                         .allowedOrigins(
-                            "https://deporsm-apiwith-1035693188565.us-central1.run.app",
-                            "https://frontend-depor-sm-pyrv6rxh1-leonardo-pucps-projects.vercel.app",
-                            "https://frontend-depor-sm-leo.vercel.app", // <-- Agrega esta línea
-                            "http://localhost:3000"
+                                "https://deporsm-apiwith-1035693188565.us-central1.run.app",
+                                "https://frontend-depor-sm-pyrv6rxh1-leonardo-pucps-projects.vercel.app",
+                                "https://frontend-depor-sm-leo.vercel.app",  // ✅ ESTE FALTABA EN EL FILTER
+                                "http://localhost:3000"
                         )
-                            // ...existing code...
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .exposedHeaders("Set-Cookie", "Authorization", "Content-Type")
@@ -41,6 +40,7 @@ public class CorsConfig {
         config.setAllowCredentials(true);
         config.addAllowedOrigin("https://deporsm-apiwith-1035693188565.us-central1.run.app");
         config.addAllowedOrigin("https://frontend-depor-sm-pyrv6rxh1-leonardo-pucps-projects.vercel.app");
+        config.addAllowedOrigin("https://frontend-depor-sm-leo.vercel.app"); // ✅ FALTABA ESTA LÍNEA
         config.addAllowedOrigin("http://localhost:3000");
         config.addAllowedHeader("*");
         config.addExposedHeader("Set-Cookie");

@@ -16,8 +16,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/mantenimientos")
-@CrossOrigin(origins = "https://deporsm-apiwith-1035693188565.us-central1.run.app", allowCredentials = "true")
-public class MantenimientoInstalacionController {
+@CrossOrigin(
+  origins = {
+    "https://deporsm-apiwith-1035693188565.us-central1.run.app",
+    "https://frontend-depor-sm-leo.vercel.app",
+    "http://localhost:3000"
+  },
+  allowCredentials = "true"
+)public class MantenimientoInstalacionController {
 
     private final MantenimientoInstalacionRepository mantenimientoRepository;
     private final InstalacionRepository instalacionRepository;

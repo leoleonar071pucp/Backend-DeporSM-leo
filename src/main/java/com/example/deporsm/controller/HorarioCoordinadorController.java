@@ -10,8 +10,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/horarios-coordinador")
-@CrossOrigin(origins = "https://deporsm-apiwith-1035693188565.us-central1.run.app", allowCredentials = "true", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
-public class HorarioCoordinadorController {
+@CrossOrigin(
+  origins = {
+    "https://deporsm-apiwith-1035693188565.us-central1.run.app",
+    "https://frontend-depor-sm-leo.vercel.app",
+    "http://localhost:3000"
+  },
+  allowCredentials = "true"
+)public class HorarioCoordinadorController {
 
     @Autowired
     private HorarioCoordinadorService horarioCoordinadorService;    

@@ -24,8 +24,14 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/observaciones")
-@CrossOrigin(origins = "https://deporsm-apiwith-1035693188565.us-central1.run.app", allowCredentials = "true")
-public class ObservacionController {
+@CrossOrigin(
+  origins = {
+    "https://deporsm-apiwith-1035693188565.us-central1.run.app",
+    "https://frontend-depor-sm-leo.vercel.app",
+    "http://localhost:3000"
+  },
+  allowCredentials = "true"
+)public class ObservacionController {
 
     @Autowired
     private ObservacionRepository observacionRepository;
