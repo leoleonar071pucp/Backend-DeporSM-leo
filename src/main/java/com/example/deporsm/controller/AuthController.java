@@ -2,6 +2,7 @@ package com.example.deporsm.controller;
 
 import com.example.deporsm.model.LoginRequest;
 import com.example.deporsm.model.Usuario;
+import com.example.deporsm.model.PasswordChangeRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -14,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.security.core.Authentication;
+import java.util.Map;
 
 
 @RestController
@@ -94,6 +96,44 @@ public class AuthController {
             System.out.println("❌ Error al obtener usuario: " + e.getMessage());
             e.printStackTrace(); // Imprime el stack trace para depuración
             return ResponseEntity.status(500).build();
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody PasswordChangeRequest request) {
+        System.out.println("📝 Intentando cambiar contraseña...");
+        
+        try {
+            // Obtener el usuario autenticado actual
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            
+            if (authentication == null || !authentication.isAuthenticated() 
+                || authentication.getPrincipal().equals("anonymousUser")) {
+                System.out.println("🚫 Usuario no autenticado o anónimo");
+                return ResponseEntity.status(401).build();
+            }
+            
+            String email = authentication.getName();
+            System.out.println("📧 Cambiando contraseña para: " + email);
+            
+            // Intentar cambiar la contraseña
+            boolean passwordChanged = authService.changePassword(
+                email, 
+                request.getCurrentPassword(),
+                request.getNewPassword()
+            );
+            
+            if (passwordChanged) {
+                System.out.println("✅ Contraseña actualizada correctamente");
+                return ResponseEntity.ok().body(Map.of("message", "Contraseña actualizada correctamente"));
+            } else {
+                System.out.println("❌ Error al actualizar contraseña: La contraseña actual no es válida");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "La contraseña actual no es válida"));
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Error al cambiar contraseña: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Error al cambiar la contraseña: " + e.getMessage()));
         }
     }
 

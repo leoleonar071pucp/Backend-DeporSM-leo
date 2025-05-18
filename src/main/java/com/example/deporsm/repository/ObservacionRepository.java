@@ -20,7 +20,8 @@ public interface ObservacionRepository extends JpaRepository<Observacion, Intege
             DATE_FORMAT(o.created_at, '%d/%m/%Y') AS fecha,
             o.estado AS estado,
             o.prioridad AS prioridad,
-            i.ubicacion AS ubicacion
+            i.ubicacion AS ubicacion,
+            o.fotos_url AS fotosUrl
         FROM 
             deportes_sm.observaciones o
         INNER JOIN 
@@ -30,22 +31,21 @@ public interface ObservacionRepository extends JpaRepository<Observacion, Intege
         ORDER BY
             o.created_at DESC
         """, nativeQuery = true)
-    List<Object[]> findAllObservacionesRaw();
-
-    default List<ObservacionDTO> findAllObservacionesDTO() {
-        return findAllObservacionesRaw().stream()
-                .map(row -> new ObservacionDTO(
-                        (Integer) row[0],
-                        (String) row[1],
-                        (String) row[2],
-                        (String) row[3],
-                        (String) row[4],
-                        (String) row[5],
-                        (String) row[6],
-                        (String) row[7]
-                ))
-                .toList();
-    }@Query(value = """
+List<Object[]> findAllObservacionesRaw();    default List<ObservacionDTO> findAllObservacionesDTO() {
+    return findAllObservacionesRaw().stream()
+            .map(row -> new ObservacionDTO(
+                    (Integer) row[0],
+                    (String) row[1],
+                    (String) row[2],
+                    (String) row[3],
+                    (String) row[4],
+                    (String) row[5],
+                    (String) row[6],
+                    (String) row[7],
+                    (String) row[8]
+            ))
+            .toList();
+}@Query(value = """
         SELECT 
             o.id AS idObservacion,
             i.nombre AS nombreInstalacion,
@@ -57,8 +57,7 @@ public interface ObservacionRepository extends JpaRepository<Observacion, Intege
         ORDER BY o.created_at DESC
         LIMIT 4
     """, nativeQuery = true)
-    List<ObservacionRecienteDTO> findObservacionesRecientes();
-      @Query(value = """
+List<ObservacionRecienteDTO> findObservacionesRecientes();      @Query(value = """
         SELECT
             o.id as idObservacion,
             i.nombre AS instalacion,
@@ -67,7 +66,8 @@ public interface ObservacionRepository extends JpaRepository<Observacion, Intege
             DATE_FORMAT(o.created_at, '%d/%m/%Y') AS fecha,
             o.estado AS estado,
             o.prioridad AS prioridad,
-            i.ubicacion AS ubicacion
+            i.ubicacion AS ubicacion,
+            o.fotos_url AS fotosUrl
         FROM 
             observaciones o
         INNER JOIN 
@@ -81,8 +81,7 @@ public interface ObservacionRepository extends JpaRepository<Observacion, Intege
         ORDER BY
             o.created_at DESC
     """, nativeQuery = true)
-    List<Object[]> findObservacionesByCoordinadorId(Integer usuarioId);
-    
+List<Object[]> findObservacionesByCoordinadorId(Integer usuarioId);
     default List<ObservacionDTO> findObservacionesDTOByCoordinadorId(Integer usuarioId) {
         return findObservacionesByCoordinadorId(usuarioId).stream()
                 .map(row -> new ObservacionDTO(
@@ -93,7 +92,8 @@ public interface ObservacionRepository extends JpaRepository<Observacion, Intege
                         (String) row[4],
                         (String) row[5],
                         (String) row[6],
-                        (String) row[7]
+                        (String) row[7],
+                        (String) row[8]
                 ))
                 .toList();
     }

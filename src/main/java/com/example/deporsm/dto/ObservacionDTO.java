@@ -10,11 +10,10 @@ public class ObservacionDTO {
     private String estado;
     private String prioridad;
     private String ubicacion;
-
-    // Constructor que debe coincidir ORDEN Y TIPO
+    private String fotosUrl;    // Constructor que debe coincidir ORDEN Y TIPO
     public ObservacionDTO(Integer idObservacion, String instalacion, String descripcion,
-                          String coordinador, String fecha, String estado, String prioridad, 
-                          String ubicacion) {
+                          String coordinador, String fecha, String estado, String prioridad,
+                          String ubicacion, String fotosUrl) {
         this.idObservacion = idObservacion;
         this.instalacion = instalacion;
         this.descripcion = descripcion;
@@ -23,6 +22,7 @@ public class ObservacionDTO {
         this.estado = estado;
         this.prioridad = prioridad;
         this.ubicacion = ubicacion;
+        this.fotosUrl = fotosUrl;
     }
 
     // Getters necesarios
@@ -51,8 +51,11 @@ public class ObservacionDTO {
     }    public String getPrioridad() {
         return prioridad;
     }
-    
     public String getUbicacion() {
         return ubicacion;
+    }
+
+    public String getFotosUrl() {
+        return fotosUrl;
     }
 }
