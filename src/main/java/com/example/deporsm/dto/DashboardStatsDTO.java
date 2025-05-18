@@ -5,4 +5,7 @@ public interface DashboardStatsDTO {
     Long getReservasActivas();
     Long getTotalInstalaciones();
     Long getTotalObservaciones();
+    Integer getMonthlyChangeTotalReservas();
+    Integer getMonthlyChangeReservasActivas();
+    Integer getMonthlyChangeTotalObservaciones();
 }

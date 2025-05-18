@@ -7,6 +7,7 @@ import com.example.deporsm.dto.CoordinadorDTO;
 import com.example.deporsm.dto.PerfilUsuarioDTO;
 import com.example.deporsm.dto.PreferenciasNotificacionDTO;
 import com.example.deporsm.dto.VecinoDTO;
+import com.example.deporsm.dto.projections.VecinoDTOProjection;
 import com.example.deporsm.model.PreferenciaNotificacion;
 import com.example.deporsm.model.Rol;
 import com.example.deporsm.model.Usuario;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Servicio para la gestión de usuarios en la aplicación
@@ -178,20 +180,44 @@ public class UsuarioService {
         preferencias.setMantenimiento(preferenciasDTO.isMantenimiento());
         
         preferenciaNotificacionRepository.save(preferencias);
-    }
-
-    /**
+    }    /**
      * Obtiene todos los vecinos con su información básica y número de reservas
-     */
-    public List<VecinoDTO> listarVecinos() {
-        return vecinoRepository.findAllVecinos();
+     */    public List<VecinoDTO> listarVecinos() {
+        List<VecinoDTOProjection> projections = usuarioRepository.findAllVecinos();
+        return projections.stream()
+            .map(p -> new VecinoDTO(
+                p.getId(),
+                p.getNombre(),
+                p.getApellidos(),
+                p.getEmail(),
+                p.getTelefono(),
+                p.getDireccion(),
+                p.getDni(),
+                p.getActivo(),
+                p.getLastLogin(),
+                p.getReservas()
+            ))
+            .collect(Collectors.toList());
     }
 
     /**
      * Busca vecinos por nombre, email o DNI
-     */
-    public List<VecinoDTO> buscarVecinos(String query) {
-        return vecinoRepository.buscarVecinos(query);
+     */    public List<VecinoDTO> buscarVecinos(String query) {
+        List<VecinoDTOProjection> projections = vecinoRepository.buscarVecinos(query);
+        return projections.stream()
+            .map(p -> new VecinoDTO(
+                p.getId(),
+                p.getNombre(),
+                p.getApellidos(),
+                p.getEmail(),
+                p.getTelefono(),
+                p.getDireccion(),
+                p.getDni(),
+                p.getActivo(),
+                p.getLastLogin(),
+                p.getReservas()
+            ))
+            .collect(Collectors.toList());
     }
 
     /**

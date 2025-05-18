@@ -46,11 +46,24 @@ public class UsuarioController {
     @PostMapping
     public Usuario crearUsuario(@RequestBody Usuario usuario) {
         return usuarioService.guardarUsuario(usuario);
-    }
-
-    @GetMapping("/allCoordinadores")
-    public List<CoordinadorDTO> listarCoordinadores() {
-        return usuarioService.listarCoordinadores();
+    }    @GetMapping("/allCoordinadores")
+    public ResponseEntity<List<CoordinadorDTO>> listarCoordinadores() {
+        System.out.println("[DEBUG] Iniciando listarCoordinadores");
+        try {
+            List<CoordinadorDTO> coordinadores = usuarioService.listarCoordinadores();
+            
+            if (coordinadores == null || coordinadores.isEmpty()) {
+                System.out.println("[DEBUG] listarCoordinadores - No se encontraron coordinadores");
+                return ResponseEntity.noContent().build();
+            }
+            
+            System.out.println("[DEBUG] listarCoordinadores - Coordinadores encontrados: " + coordinadores.size());
+            return ResponseEntity.ok(coordinadores);
+        } catch (Exception e) {
+            System.out.println("[DEBUG] Error en listarCoordinadores: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
     }
     
     @GetMapping("/perfil")

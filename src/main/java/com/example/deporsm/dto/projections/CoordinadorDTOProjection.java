@@ -1,10 +1,9 @@
-package com.example.deporsm.dto;
+package com.example.deporsm.dto.projections;
 
-public interface AdministradorDTO {
+public interface CoordinadorDTOProjection {
     Integer getId();
     String getNombre();
     String getEmail();
     String getTelefono();
     String getInstalacionesAsignadas();
-    Boolean getActivo();
 }

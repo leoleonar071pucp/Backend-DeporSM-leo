@@ -70,58 +70,48 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
         ORDER BY 
             u.nombre, u.apellidos
         """, nativeQuery = true)
-    List<AdministradorDTO> findAllAdministradores();    
+    List<AdministradorDTO> findAllAdministradores();
 
-    // Get monthly growth percentage for all users    
+    // Get monthly growth percentage for all users - now using last 30 days
     @Query(value = """
     SELECT 
         CASE 
-            WHEN prev_count = 0 THEN 
-                CASE 
-                    WHEN curr_count > 0 THEN 100 
-                    ELSE 0  -- Si no había antes y no hay ahora, es 0%
-                END
+            WHEN prev_count = 0 THEN 100
             ELSE ROUND(((curr_count - prev_count) * 100.0 / prev_count), 0)
         END
     FROM (
-        SELECT            (SELECT COUNT(*) 
-             FROM usuarios u 
-             WHERE u.created_at <= NOW()) as curr_count,
+        SELECT 
             (SELECT COUNT(*) 
-             FROM usuarios u 
-             WHERE u.created_at <= DATE_SUB(NOW(), INTERVAL 30 DAY)) as prev_count
+             FROM usuarios 
+             WHERE activo = true 
+             AND created_at <= NOW()) as curr_count,
+            (SELECT COUNT(*) 
+             FROM usuarios 
+             WHERE activo = true 
+             AND created_at <= DATE_SUB(NOW(), INTERVAL 30 DAY)) as prev_count
     ) counts
     """, nativeQuery = true)
     int getMonthlyGrowthPercentage();
 
-    // Get monthly growth percentage by role
+    // Get monthly growth percentage by role - now using last 30 days
     @Query(value = """
     SELECT 
         CASE 
-            WHEN prev_count = 0 THEN 
-                CASE 
-                    WHEN curr_count > 0 THEN 100 
-                    ELSE 0  -- Si no había antes y no hay ahora, es 0%
-                END
+            WHEN prev_count = 0 THEN 100
             ELSE ROUND(((curr_count - prev_count) * 100.0 / prev_count), 0)
         END
     FROM (
-        SELECT            (SELECT COUNT(*) 
-             FROM usuarios u 
-             WHERE CASE 
-                   WHEN :roleId = 4 THEN true -- Para vecinos, no filtramos por activo
-                   ELSE u.activo = true -- Para otros roles, sí filtramos por activo
-                   END
-             AND u.role_id = :roleId 
-             AND u.created_at <= NOW()) as curr_count,
+        SELECT 
             (SELECT COUNT(*) 
-             FROM usuarios u 
-             WHERE CASE 
-                   WHEN :roleId = 4 THEN true -- Para vecinos, no filtramos por activo
-                   ELSE u.activo = true -- Para otros roles, sí filtramos por activo
-                   END
-             AND u.role_id = :roleId 
-             AND u.created_at <= DATE_SUB(NOW(), INTERVAL 30 DAY)) as prev_count
+             FROM usuarios 
+             WHERE activo = true 
+             AND role_id = :roleId
+             AND created_at <= NOW()) as curr_count,
+            (SELECT COUNT(*) 
+             FROM usuarios 
+             WHERE activo = true 
+             AND role_id = :roleId
+             AND created_at <= DATE_SUB(NOW(), INTERVAL 30 DAY)) as prev_count
     ) counts
     """, nativeQuery = true)
     int getMonthlyGrowthPercentageByRole(Integer roleId);
