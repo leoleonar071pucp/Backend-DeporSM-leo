@@ -29,22 +29,22 @@ public interface InstalacionRepository extends JpaRepository<Instalacion, Intege
 
 
     @Query(value = """
-    SELECT 
+    SELECT
         i.id AS id_instalacion,
         i.nombre AS nombre_instalacion,
-        CASE 
+        CASE
             WHEN EXISTS (
-                SELECT 1 
-                FROM mantenimiento_instalaciones m 
+                SELECT 1
+                FROM mantenimiento_instalaciones m
                 WHERE m.instalacion_id = i.id
                   AND CURRENT_TIMESTAMP BETWEEN m.fecha_inicio AND m.fecha_fin
             ) THEN 'mantenimiento'
             ELSE 'disponible'
         END AS estado,
         (
-            SELECT COUNT(*) 
-            FROM reservas r 
-            WHERE r.instalacion_id = i.id 
+            SELECT COUNT(*)
+            FROM reservas r
+            WHERE r.instalacion_id = i.id
               AND DATE(r.fecha) = CURDATE()
         ) AS reservas_hoy
     FROM instalaciones i
@@ -53,6 +53,23 @@ public interface InstalacionRepository extends JpaRepository<Instalacion, Intege
     LIMIT 7
 """, nativeQuery = true)
     List<InstalacionEstadoDTO> getEstadoActualInstalaciones();
+
+    /**
+     * Obtiene las instalaciones más populares basadas en el número total de reservas
+     */
+    @Query(value = """
+    SELECT i.* FROM instalaciones i
+    LEFT JOIN (
+        SELECT instalacion_id, COUNT(*) as total_reservas
+        FROM reservas
+        WHERE estado != 'cancelada'
+        GROUP BY instalacion_id
+    ) r ON i.id = r.instalacion_id
+    WHERE i.activo = TRUE
+    ORDER BY CASE WHEN r.total_reservas IS NULL THEN 0 ELSE r.total_reservas END DESC, i.nombre ASC
+    LIMIT 10
+    """, nativeQuery = true)
+    List<Instalacion> getInstalacionesPopulares();
 
 
 }

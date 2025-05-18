@@ -30,7 +30,7 @@ public class ReservaController {
 
     @Autowired
     private ReservaRepository reservaRepository;
-    
+
     @Autowired
     private ReservaService reservaService;    @GetMapping("/usuario/{dni}")
     public List<ReservaListDTO> obtenerReservasPorUsuario(@PathVariable String dni) {
@@ -61,6 +61,14 @@ public class ReservaController {
         return reservaRepository.getDashboardStats();
     }
 
+    /**
+     * Obtiene las reservas más recientes para mostrar en la página de inicio
+     */
+    @GetMapping("/recientes")
+    public List<ReservaRecienteDTO> obtenerReservasRecientes() {
+        return reservaRepository.obtenerReservasRecientes();
+    }
+
 
     /**
      * Crea una nueva reserva para el usuario autenticado
@@ -68,12 +76,12 @@ public class ReservaController {
     @PostMapping
     public ResponseEntity<?> crearReserva(@RequestBody CrearReservaDTO reservaDTO) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
-        if (authentication == null || !authentication.isAuthenticated() 
+
+        if (authentication == null || !authentication.isAuthenticated()
             || authentication.getPrincipal().equals("anonymousUser")) {
             return ResponseEntity.status(401).body("Usuario no autenticado");
         }
-        
+
         String email = authentication.getName();
         try {
             Reserva reservaCreada = reservaService.crearReserva(email, reservaDTO);
@@ -82,19 +90,19 @@ public class ReservaController {
             return ResponseEntity.badRequest().body("Error al crear reserva: " + e.getMessage());
         }
     }
-    
+
     /**
      * Cancela una reserva
      */
     @PutMapping("/{id}/cancelar")
     public ResponseEntity<?> cancelarReserva(@PathVariable Integer id, @RequestParam(required = false) String motivo) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
-        if (authentication == null || !authentication.isAuthenticated() 
+
+        if (authentication == null || !authentication.isAuthenticated()
             || authentication.getPrincipal().equals("anonymousUser")) {
             return ResponseEntity.status(401).body("Usuario no autenticado");
         }
-        
+
         String email = authentication.getName();
         try {
             reservaService.cancelarReserva(id, email, motivo);
@@ -109,12 +117,12 @@ public class ReservaController {
     @GetMapping("/historial")
     public ResponseEntity<?> historialReservas() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
-        if (authentication == null || !authentication.isAuthenticated() 
+
+        if (authentication == null || !authentication.isAuthenticated()
             || authentication.getPrincipal().equals("anonymousUser")) {
             return ResponseEntity.status(401).body("Usuario no autenticado");
         }
-        
+
         String email = authentication.getName();
         try {
             return ResponseEntity.ok(reservaService.obtenerHistorialReservas(email));
@@ -122,15 +130,15 @@ public class ReservaController {
             return ResponseEntity.badRequest().body("Error al obtener historial: " + e.getMessage());
         }
     }
-    
+
     /**
      * Obtiene los detalles de una reserva específica por su ID
      */
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerDetalleReserva(@PathVariable Integer id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
-        if (authentication == null || !authentication.isAuthenticated() 
+
+        if (authentication == null || !authentication.isAuthenticated()
             || authentication.getPrincipal().equals("anonymousUser")) {
             return ResponseEntity.status(401).body("Usuario no autenticado");
         }

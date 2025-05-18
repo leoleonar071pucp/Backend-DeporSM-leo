@@ -214,6 +214,14 @@ public class InstalacionesController {
         return repository.getEstadoActualInstalaciones();
     }
 
+    /**
+     * Obtiene las instalaciones más populares basadas en el número de reservas
+     */
+    @GetMapping("/populares")
+    public List<Instalacion> obtenerInstalacionesPopulares() {
+        return repository.getInstalacionesPopulares();
+    }
+
     // Se eliminó el método eliminarInstalacion duplicado con ruta mal formada
     // ya existe un método @DeleteMapping("/{id}") arriba
 

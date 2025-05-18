@@ -32,9 +32,9 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     List<ReservaListDTO> listarReservasParaAdmin();    // Método para buscar reservas por el DNI del usuario
     @Query("SELECT r FROM Reserva r JOIN r.usuario u WHERE u.dni = :dni")
     List<Reserva> findByUsuario_Dni(@Param("dni") String dni);
-    
+
     @Query(value = """
-    SELECT 
+    SELECT
       COALESCE(COUNT(*), 0) AS totalReservas,
       COALESCE(SUM(CASE WHEN estado IN ('pendiente', 'confirmada') THEN 1 ELSE 0 END), 0) AS reservasActivas,
       (SELECT COALESCE(COUNT(*), 0) FROM instalaciones WHERE activo = true) AS totalInstalaciones,
@@ -42,12 +42,13 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     FROM reservas
     """, nativeQuery = true)
     DashboardStatsDTO getDashboardStats(); // ← preferido si estás usando una proyección basada en constructor
-    
+
     @Query(value = """
-    SELECT 
+    SELECT
         r.id AS idReserva,
         u.nombre AS nombreUsuario,
         i.nombre AS nombreInstalacion,
+        i.id AS instalacionId,
         r.fecha AS fecha,
         r.hora_inicio AS horaInicio,
         r.hora_fin AS horaFin,
@@ -56,11 +57,12 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     FROM reservas r
     JOIN usuarios u ON r.usuario_id = u.id
     JOIN instalaciones i ON r.instalacion_id = i.id
+    WHERE r.estado != 'cancelada'
     ORDER BY r.fecha DESC, r.hora_inicio DESC
-    LIMIT 5
+    LIMIT 50
     """, nativeQuery = true)
     List<ReservaRecienteDTO> obtenerReservasRecientes();
-    
+
     // Consulta para obtener los detalles de una reserva específica
     @Query("SELECT new com.example.deporsm.dto.ReservaDetalleDTO(" +
             "r.id, " +

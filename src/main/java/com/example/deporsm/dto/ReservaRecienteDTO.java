@@ -7,6 +7,7 @@ public interface ReservaRecienteDTO {
     Integer getIdReserva();
     String getNombreUsuario();
     String getNombreInstalacion();
+    Integer getInstalacionId();
     LocalDate getFecha();
     LocalTime getHoraInicio();
     LocalTime getHoraFin();
