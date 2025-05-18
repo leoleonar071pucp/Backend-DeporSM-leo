@@ -29,10 +29,10 @@ import org.springframework.web.filter.CorsFilter;
 
 @Configuration
 public class SecurityConfig {
-    
+
     private final CorsFilter corsFilter;
     private final AuthDebugFilter authDebugFilter;
-    
+
     public SecurityConfig(CorsFilter corsFilter, AuthDebugFilter authDebugFilter) {
         this.corsFilter = corsFilter;
         this.authDebugFilter = authDebugFilter;
@@ -65,11 +65,15 @@ public class SecurityConfig {
                         .logoutSuccessHandler((request, response, authentication) -> {
                             // Establecer headers CORS explícitamente para la respuesta de logout
                             String origin = request.getHeader("Origin");
-                            if (origin != null && (origin.equals("https://deporsm-apiwith-1035693188565.us-central1.run.app") 
-                                                  || origin.equals("http://localhost:3000"))) {
+                            if (origin != null && (
+                                origin.equals("https://deporsm-apiwith-1035693188565.us-central1.run.app") ||
+                                origin.equals("https://frontend-depor-sm-leo.vercel.app") ||
+                                origin.equals("http://localhost:3000")
+                            )) {
                                 response.setHeader("Access-Control-Allow-Origin", origin);
                             } else {
-                                response.setHeader("Access-Control-Allow-Origin", "https://deporsm-apiwith-1035693188565.us-central1.run.app");
+                                // Valor predeterminado para otros orígenes
+                                response.setHeader("Access-Control-Allow-Origin", "https://frontend-depor-sm-leo.vercel.app");
                             }
                             response.setHeader("Access-Control-Allow-Credentials", "true");
                             response.setStatus(HttpServletResponse.SC_OK);
@@ -115,23 +119,40 @@ public class SecurityConfig {
     public HttpSessionEventPublisher httpSessionEventPublisher() {
         return new HttpSessionEventPublisher();
     }
-      // Configuración para cookies    @Bean
+    // Configuración para cookies
+    @Bean
     public ServletContextInitializer cookieConfigurer() {
         return servletContext -> {
             var sessionCookieConfig = servletContext.getSessionCookieConfig();
             sessionCookieConfig.setHttpOnly(true);
-            sessionCookieConfig.setSecure(false); // False para desarrollo local
+
+            // Determinar si estamos en producción o desarrollo
+            String activeProfile = System.getProperty("spring.profiles.active");
+            boolean isProduction = activeProfile != null && activeProfile.contains("prod");
+
+            // En producción: secure=true para HTTPS
+            // En desarrollo: secure=false para HTTP local
+            sessionCookieConfig.setSecure(isProduction);
+
             sessionCookieConfig.setMaxAge(86400); // 24 horas para mayor duración
             sessionCookieConfig.setName("JSESSIONID"); // Asegurarse que el nombre sea consistente
         };
     }
-    
+
     // Configuración para permitir cookies en peticiones cross-origin
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> cookieProcessorCustomizer() {
         return factory -> factory.addContextCustomizers(context -> {
             Rfc6265CookieProcessor processor = new Rfc6265CookieProcessor();
-            processor.setSameSiteCookies("Lax"); // Cambiado a Lax para mejor compatibilidad
+
+            // Determinar si estamos en producción o desarrollo
+            String activeProfile = System.getProperty("spring.profiles.active");
+            boolean isProduction = activeProfile != null && activeProfile.contains("prod");
+
+            // En producción: SameSite=None para permitir cookies cross-site
+            // En desarrollo: SameSite=Lax para mejor compatibilidad local
+            processor.setSameSiteCookies(isProduction ? "None" : "Lax");
+
             context.setCookieProcessor(processor);
         });
     }

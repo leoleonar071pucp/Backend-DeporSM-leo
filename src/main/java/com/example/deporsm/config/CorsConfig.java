@@ -1,5 +1,6 @@
 package com.example.deporsm.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -10,18 +11,18 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class CorsConfig {
-    @Bean
+
+    @Value("${app.cors.allowed-origins:http://localhost:3000}")
+    private String allowedOriginsString;    @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
+                // Convertir la cadena de orígenes separados por comas en un array
+                String[] origins = allowedOriginsString.split(",");
+
                 registry.addMapping("/**")
-                        .allowedOrigins(
-                                "https://deporsm-apiwith-1035693188565.us-central1.run.app",
-                                "https://frontend-depor-sm-pyrv6rxh1-leonardo-pucps-projects.vercel.app",
-                                "https://frontend-depor-sm-leo.vercel.app",  // ✅ ESTE FALTABA EN EL FILTER
-                                "http://localhost:3000"
-                        )
+                        .allowedOrigins(origins)
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .exposedHeaders("Set-Cookie", "Authorization", "Content-Type")
@@ -29,18 +30,18 @@ public class CorsConfig {
                         .maxAge(86400);
             }
         };
-    }
-
-    @Bean
+    }    @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(true);
-        config.addAllowedOrigin("https://deporsm-apiwith-1035693188565.us-central1.run.app");
-        config.addAllowedOrigin("https://frontend-depor-sm-pyrv6rxh1-leonardo-pucps-projects.vercel.app");
-        config.addAllowedOrigin("https://frontend-depor-sm-leo.vercel.app"); // ✅ FALTABA ESTA LÍNEA
-        config.addAllowedOrigin("http://localhost:3000");
+
+        // Agregar todos los orígenes permitidos desde la configuración
+        String[] origins = allowedOriginsString.split(",");
+        for (String origin : origins) {
+            config.addAllowedOrigin(origin.trim());
+        }
         config.addAllowedHeader("*");
         config.addExposedHeader("Set-Cookie");
         config.addExposedHeader("Authorization");
