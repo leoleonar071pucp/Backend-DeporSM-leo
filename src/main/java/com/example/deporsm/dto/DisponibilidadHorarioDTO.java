@@ -16,13 +16,25 @@ import java.util.List;
 public class DisponibilidadHorarioDTO {
     private Date fecha;
     private List<RangoHorarioDTO> horariosDisponibles;
-    
+
     @Getter
     @Setter
     @NoArgsConstructor
-    @AllArgsConstructor
     public static class RangoHorarioDTO {
         private Time horaInicio;
         private Time horaFin;
+        private boolean bloqueadoTemporalmente = false;
+
+        public RangoHorarioDTO(Time horaInicio, Time horaFin) {
+            this.horaInicio = horaInicio;
+            this.horaFin = horaFin;
+            this.bloqueadoTemporalmente = false;
+        }
+
+        public RangoHorarioDTO(Time horaInicio, Time horaFin, boolean bloqueadoTemporalmente) {
+            this.horaInicio = horaInicio;
+            this.horaFin = horaFin;
+            this.bloqueadoTemporalmente = bloqueadoTemporalmente;
+        }
     }
 }

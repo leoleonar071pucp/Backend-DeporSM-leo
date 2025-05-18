@@ -8,6 +8,7 @@ import com.example.deporsm.dto.InstalacionListDTO;
 import com.example.deporsm.dto.InstalacionRequestDTO;
 import com.example.deporsm.model.*;
 import com.example.deporsm.repository.*;
+import com.example.deporsm.service.BloqueoTemporalService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,13 +33,14 @@ import java.util.stream.Collectors;
 )
 
 public class InstalacionesController {
-    
+
     private final InstalacionRepository repository;
     private final CaracteristicaInstalacionRepository caracteristicaRepository;
     private final ComodidadInstalacionRepository comodidadRepository;
     private final ReglaInstalacionRepository reglaRepository;
     private final HorarioDisponibleRepository horarioDisponibleRepository;
     private final CoordinadorInstalacionRepository coordinadorInstalacionRepository;
+    private final BloqueoTemporalService bloqueoTemporalService;
 
     public InstalacionesController(
             InstalacionRepository repository,
@@ -46,13 +48,15 @@ public class InstalacionesController {
             ComodidadInstalacionRepository comodidadRepository,
             ReglaInstalacionRepository reglaRepository,
             HorarioDisponibleRepository horarioDisponibleRepository,
-            CoordinadorInstalacionRepository coordinadorInstalacionRepository) {
+            CoordinadorInstalacionRepository coordinadorInstalacionRepository,
+            BloqueoTemporalService bloqueoTemporalService) {
         this.repository = repository;
         this.caracteristicaRepository = caracteristicaRepository;
         this.comodidadRepository = comodidadRepository;
         this.reglaRepository = reglaRepository;
         this.horarioDisponibleRepository = horarioDisponibleRepository;
         this.coordinadorInstalacionRepository = coordinadorInstalacionRepository;
+        this.bloqueoTemporalService = bloqueoTemporalService;
     }
 
     @GetMapping
@@ -120,7 +124,7 @@ public class InstalacionesController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
-    }    
+    }
 
     /**
      * Crea una nueva instalación con sus características, comodidades y reglas
@@ -129,7 +133,7 @@ public class InstalacionesController {
     public ResponseEntity<?> crearInstalacion(@RequestBody InstalacionRequestDTO request) {
         try {
             Timestamp now = new Timestamp(System.currentTimeMillis());
-            
+
             // Crear la instalación
             Instalacion nuevaInstalacion = new Instalacion();
             nuevaInstalacion.setNombre(request.getNombre());
@@ -142,42 +146,42 @@ public class InstalacionesController {
             nuevaInstalacion.setPrecio(request.getPrecio());
             nuevaInstalacion.setCreatedAt(now);
             nuevaInstalacion.setUpdatedAt(now);
-            
+
             // Validación simple
             if (nuevaInstalacion.getActivo() == null) {
                 nuevaInstalacion.setActivo(true); // por defecto activa
             }
-            
+
             // Guardar la instalación primero para obtener su ID
             Instalacion instalacionGuardada = repository.save(nuevaInstalacion);
-            
+
             // Procesar y guardar características si existen
             if (request.getCaracteristicas() != null && !request.getCaracteristicas().isEmpty()) {
                 for (String caracteristica : request.getCaracteristicas()) {
-                    CaracteristicaInstalacion nuevaCaracteristica = 
+                    CaracteristicaInstalacion nuevaCaracteristica =
                         new CaracteristicaInstalacion(instalacionGuardada, caracteristica);
                     caracteristicaRepository.save(nuevaCaracteristica);
                 }
             }
-            
+
             // Procesar y guardar comodidades si existen
             if (request.getComodidades() != null && !request.getComodidades().isEmpty()) {
                 for (String comodidad : request.getComodidades()) {
-                    ComodidadInstalacion nuevaComodidad = 
+                    ComodidadInstalacion nuevaComodidad =
                         new ComodidadInstalacion(instalacionGuardada, comodidad);
                     comodidadRepository.save(nuevaComodidad);
                 }
             }
-            
+
             // Procesar y guardar reglas si existen
             if (request.getReglas() != null && !request.getReglas().isEmpty()) {
                 for (String regla : request.getReglas()) {
-                    ReglaInstalacion nuevaRegla = 
+                    ReglaInstalacion nuevaRegla =
                         new ReglaInstalacion(instalacionGuardada, regla);
                     reglaRepository.save(nuevaRegla);
                 }
             }
-            
+
             // Procesar y guardar horarios disponibles si existen
             if (request.getHorariosDisponibles() != null && !request.getHorariosDisponibles().isEmpty()) {
                 for (InstalacionRequestDTO.HorarioDisponibleDTO horarioDTO : request.getHorariosDisponibles()) {
@@ -188,23 +192,23 @@ public class InstalacionesController {
                         // Si hay un error en el formato del día, lo ignoramos y continuamos
                         continue;
                     }
-                    
+
                     // Convertir strings de hora a objetos Time
                     Time horaInicio = Time.valueOf(horarioDTO.getHoraInicio());
                     Time horaFin = Time.valueOf(horarioDTO.getHoraFin());
-                    
-                    HorarioDisponible nuevoHorario = 
+
+                    HorarioDisponible nuevoHorario =
                         new HorarioDisponible(instalacionGuardada, diaSemana, horaInicio, horaFin);
                     horarioDisponibleRepository.save(nuevoHorario);
                 }
             }
-            
+
             return ResponseEntity.ok(instalacionGuardada);
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                 .body("Error al crear instalación: " + e.getMessage());
         }    }
-    
+
     @GetMapping("/estado-instalaciones")
     public List<InstalacionEstadoDTO> obtenerEstadoActualDeInstalaciones() {
         return repository.getEstadoActualInstalaciones();
@@ -212,7 +216,7 @@ public class InstalacionesController {
 
     // Se eliminó el método eliminarInstalacion duplicado con ruta mal formada
     // ya existe un método @DeleteMapping("/{id}") arriba
-    
+
     /**
      * Obtiene el detalle de una instalación por su ID
      */    @GetMapping("/{id}")
@@ -231,10 +235,10 @@ public class InstalacionesController {
                         detalleDTO.setHorarioCierre(instalacion.getHorarioCierre());                        detalleDTO.setImagenUrl(instalacion.getImagenUrl());
                         detalleDTO.setPrecio(instalacion.getPrecio());
                         detalleDTO.setActivo(instalacion.getActivo());
-                        
+
                         // Verificar si está en mantenimiento (implementación simplificada)
                         detalleDTO.setEstado(instalacion.getActivo() ? "disponible" : "no disponible");
-                        
+
                         // Obtener características
                         List<CaracteristicaInstalacion> caracteristicas = caracteristicaRepository.findByInstalacionId(id);
                         if (caracteristicas != null && !caracteristicas.isEmpty()) {
@@ -244,7 +248,7 @@ public class InstalacionesController {
                         } else {
                             detalleDTO.setCaracteristicas(new ArrayList<>());
                         }
-                        
+
                         // Obtener comodidades
                         List<ComodidadInstalacion> comodidades = comodidadRepository.findByInstalacionId(id);
                         if (comodidades != null && !comodidades.isEmpty()) {
@@ -254,7 +258,7 @@ public class InstalacionesController {
                         } else {
                             detalleDTO.setComodidades(new ArrayList<>());
                         }
-                        
+
                         // Obtener reglas
                         List<ReglaInstalacion> reglas = reglaRepository.findByInstalacionId(id);
                         if (reglas != null && !reglas.isEmpty()) {
@@ -264,7 +268,7 @@ public class InstalacionesController {
                         } else {
                             detalleDTO.setReglas(new ArrayList<>());
                         }
-                        
+
                         return ResponseEntity.ok(detalleDTO);
                     })
                     .orElse(ResponseEntity.notFound().build());
@@ -281,13 +285,22 @@ public class InstalacionesController {
             @PathVariable Integer id,
             @RequestParam java.sql.Date fecha) {
         try {
+            System.out.println("Obteniendo disponibilidad para instalación ID: " + id + ", fecha: " + fecha);
+
+            // Verificar que la instalación existe
+            if (!repository.existsById(id)) {
+                System.err.println("Instalación no encontrada con ID: " + id);
+                return ResponseEntity.notFound().build();
+            }
+
             DisponibilidadHorarioDTO disponibilidad = new DisponibilidadHorarioDTO();
             disponibilidad.setFecha(fecha);
-              // Obtener día de la semana de la fecha seleccionada
+
+            // Obtener día de la semana de la fecha seleccionada
             Calendar calendar = Calendar.getInstance();
             calendar.setTime(fecha);
             int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
-            
+
             // Convertir al formato de enum DiaSemana
             final HorarioDisponible.DiaSemana diaSemana;
             switch(dayOfWeek) {
@@ -300,30 +313,56 @@ public class InstalacionesController {
                 case Calendar.SUNDAY: diaSemana = HorarioDisponible.DiaSemana.DOMINGO; break;
                 default: diaSemana = HorarioDisponible.DiaSemana.LUNES; // Valor por defecto
             }
-            
-            // Si no hay datos en la base de datos, caemos en el comportamiento anterior
+
+            System.out.println("Día de la semana: " + diaSemana);
+
+            // Obtener los horarios disponibles para la instalación y día de la semana
             List<HorarioDisponible> horariosDisponibles = horarioDisponibleRepository
                 .findDisponiblesByInstalacionAndDiaSemana(id, diaSemana);
-            
-            final List<DisponibilidadHorarioDTO.RangoHorarioDTO> horarios = new ArrayList<>();              if (horariosDisponibles != null && !horariosDisponibles.isEmpty()) {
+
+            System.out.println("Horarios disponibles encontrados: " + (horariosDisponibles != null ? horariosDisponibles.size() : 0));
+
+            final List<DisponibilidadHorarioDTO.RangoHorarioDTO> horarios = new ArrayList<>();
+            if (horariosDisponibles != null && !horariosDisponibles.isEmpty()) {
                 // Usar los horarios de la base de datos
                 for (HorarioDisponible horario : horariosDisponibles) {
-                    horarios.add(new DisponibilidadHorarioDTO.RangoHorarioDTO(
+                    System.out.println("Verificando disponibilidad para horario: " +
+                                      horario.getHoraInicio() + " - " + horario.getHoraFin());
+
+                    // Verificar si el horario está bloqueado temporalmente
+                    boolean disponible = bloqueoTemporalService.verificarDisponibilidadHorario(
+                        id,
+                        fecha,
                         horario.getHoraInicio(),
                         horario.getHoraFin()
-                    ));
+                    );
+
+                    System.out.println("Horario " + horario.getHoraInicio() + " - " + horario.getHoraFin() +
+                                      " disponible: " + disponible);
+
+                    // Siempre añadir el horario, pero marcarlo como bloqueado si no está disponible
+                    DisponibilidadHorarioDTO.RangoHorarioDTO rangoDTO = new DisponibilidadHorarioDTO.RangoHorarioDTO(
+                        horario.getHoraInicio(),
+                        horario.getHoraFin(),
+                        !disponible // bloqueadoTemporalmente = !disponible
+                    );
+                    horarios.add(rangoDTO);
                 }
+            } else {
+                System.out.println("No se encontraron horarios disponibles para esta instalación y día");
             }
-            // Ya sean con horarios o sin horarios, siempre devolvemos la misma estructura
-            // (con lista de horarios vacía si no hay disponibilidad)}
-            
+
             // Crear y devolver la respuesta con los horarios encontrados
             DisponibilidadHorarioDTO disponibilidadResponse = new DisponibilidadHorarioDTO();
             disponibilidadResponse.setFecha(fecha);
             disponibilidadResponse.setHorariosDisponibles(horarios);
+
+            System.out.println("Devolviendo " + horarios.size() + " horarios");
             return ResponseEntity.ok(disponibilidadResponse);
-            
+
         } catch (Exception e) {
+            System.err.println("Error al obtener disponibilidad: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest()
                     .body("Error al obtener disponibilidad: " + e.getMessage());
         }
@@ -337,11 +376,11 @@ public class InstalacionesController {
             // Por defecto usar la fecha actual si no se especifica
             if (fecha == null) {
                 fecha = new java.sql.Date(System.currentTimeMillis());
-            }            // Obtener todas las instalaciones activas 
+            }            // Obtener todas las instalaciones activas
             List<Instalacion> instalacionesActivas = repository.findAll().stream()
                 .filter(instalacion -> instalacion.getActivo() != null && instalacion.getActivo())
                 .collect(Collectors.toList());
-            
+
             // Convertir las instalaciones a DTOs para evitar problemas de serialización
             List<InstalacionListDTO> instalacionesDTOs = new ArrayList<>();
             for (Instalacion instalacion : instalacionesActivas) {
@@ -361,7 +400,7 @@ public class InstalacionesController {
                 );
                 instalacionesDTOs.add(dto);
             }
-            
+
             return ResponseEntity.ok(instalacionesDTOs);
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -385,7 +424,7 @@ public class InstalacionesController {
                         if (horariosActuales != null && !horariosActuales.isEmpty()) {
                             horarioDisponibleRepository.deleteAll(horariosActuales);
                         }
-                        
+
                         // Guardar los nuevos horarios
                         if (horarios != null && !horarios.isEmpty()) {
                             for (InstalacionRequestDTO.HorarioDisponibleDTO horarioDTO : horarios) {
@@ -395,17 +434,17 @@ public class InstalacionesController {
                                 } catch (IllegalArgumentException e) {
                                     continue;
                                 }
-                                
+
                                 // Convertir strings de hora a objetos Time
                                 Time horaInicio = Time.valueOf(horarioDTO.getHoraInicio());
                                 Time horaFin = Time.valueOf(horarioDTO.getHoraFin());
-                                
-                                HorarioDisponible nuevoHorario = 
+
+                                HorarioDisponible nuevoHorario =
                                     new HorarioDisponible(instalacion, diaSemana, horaInicio, horaFin);
                                 horarioDisponibleRepository.save(nuevoHorario);
                             }
                         }
-                        
+
                         return ResponseEntity.ok().body("Horarios disponibles actualizados correctamente");
                     })
                     .orElse(ResponseEntity.notFound().build());
@@ -425,7 +464,7 @@ public class InstalacionesController {
             return repository.findById(id)
                     .map(instalacion -> {
                         List<HorarioDisponible> horarios = horarioDisponibleRepository.findByInstalacionId(id);
-                        
+
                         // Convertir a DTO para la respuesta
                         List<Map<String, Object>> horariosDTO = new ArrayList<>();
                         if (horarios != null) {
@@ -439,7 +478,7 @@ public class InstalacionesController {
                                 horariosDTO.add(horarioMap);
                             }
                         }
-                        
+
                         return ResponseEntity.ok(horariosDTO);
                     })
                     .orElse(ResponseEntity.notFound().build());        } catch (Exception e) {
@@ -456,16 +495,16 @@ public class InstalacionesController {
         try {
             // Obtener las asignaciones del coordinador
             List<CoordinadorInstalacion> asignaciones = coordinadorInstalacionRepository.findByUsuarioId(coordinadorId);
-            
+
             if (asignaciones.isEmpty()) {
                 return ResponseEntity.ok(new ArrayList<>());
             }
-            
+
             // Extraer las instalaciones de las asignaciones
             List<Instalacion> instalaciones = asignaciones.stream()
                 .map(CoordinadorInstalacion::getInstalacion)
                 .collect(Collectors.toList());
-            
+
             // Convertir a DTO simplificado para la respuesta
             List<Map<String, Object>> instalacionesDTO = instalaciones.stream()
                 .map(instalacion -> {
@@ -477,7 +516,7 @@ public class InstalacionesController {
                     return dto;
                 })
                 .collect(Collectors.toList());
-            
+
             return ResponseEntity.ok(instalacionesDTO);
         } catch (Exception e) {
             return ResponseEntity.badRequest()

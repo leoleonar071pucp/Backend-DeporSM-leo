@@ -2,9 +2,11 @@ package com.example.deporsm.service;
 
 import com.example.deporsm.dto.CrearReservaDTO;
 import com.example.deporsm.dto.ReservaListDTO;
+import com.example.deporsm.model.BloqueoTemporal;
 import com.example.deporsm.model.Instalacion;
 import com.example.deporsm.model.Reserva;
 import com.example.deporsm.model.Usuario;
+import com.example.deporsm.repository.BloqueoTemporalRepository;
 import com.example.deporsm.repository.InstalacionRepository;
 import com.example.deporsm.repository.ReservaRepository;
 import com.example.deporsm.repository.UsuarioRepository;
@@ -24,18 +26,22 @@ public class ReservaService {
 
     @Autowired
     private ReservaRepository reservaRepository;
-    
+
     @Autowired
     private UsuarioRepository usuarioRepository;
-    
+
     @Autowired
     private InstalacionRepository instalacionRepository;
-    
+
+    @Autowired
+    private BloqueoTemporalRepository bloqueoTemporalRepository;
+
     @PersistenceContext
     private EntityManager entityManager;
-      @Autowired
+
+    @Autowired
     private PagoService pagoService;
-    
+
     /**
      * Crea una nueva reserva para un usuario
      * @param email Email del usuario
@@ -48,25 +54,39 @@ public class ReservaService {
     public Reserva crearReserva(String email, CrearReservaDTO reservaDTO) {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        
+
         Instalacion instalacion = instalacionRepository.findById(reservaDTO.getInstalacionId())
                 .orElseThrow(() -> new RuntimeException("Instalación no encontrada"));
-        
+
         if (!instalacion.getActivo()) {
             throw new RuntimeException("La instalación no está disponible para reservas");
         }
-        
-        // Verificar disponibilidad de horario (implementación simplificada)
+
+        // Liberar cualquier bloqueo temporal que el usuario pudiera tener
+        bloqueoTemporalRepository.deleteByUsuarioId(usuario.getId());
+
+        // Verificar disponibilidad de horario
         boolean horarioDisponible = verificarDisponibilidadHorario(
-                instalacion.getId(), 
+                instalacion.getId(),
                 reservaDTO.getFecha(),
                 reservaDTO.getHoraInicio(),
                 reservaDTO.getHoraFin());
-        
+
         if (!horarioDisponible) {
             throw new RuntimeException("El horario seleccionado no está disponible");
         }
-        
+
+        // Verificar si hay conflicto con otras reservas del mismo usuario
+        boolean hayConflicto = verificarConflictoHorarioUsuario(
+                usuario.getId(),
+                reservaDTO.getFecha(),
+                reservaDTO.getHoraInicio(),
+                reservaDTO.getHoraFin());
+
+        if (hayConflicto) {
+            throw new RuntimeException("El horario seleccionado entra en conflicto con otra reserva que ya tienes para ese día");
+        }
+
         // Crear la reserva
         Reserva reserva = new Reserva();
         reserva.setUsuario(usuario);
@@ -74,7 +94,7 @@ public class ReservaService {
         reserva.setFecha(reservaDTO.getFecha());
         reserva.setHoraInicio(reservaDTO.getHoraInicio());
         reserva.setHoraFin(reservaDTO.getHoraFin());
-        
+
         // Manejar el campo numeroAsistentes de forma segura
         try {
             if (reservaDTO.getNumeroAsistentes() != null) {
@@ -84,16 +104,16 @@ public class ReservaService {
             // Si el campo no existe en la entidad, solo log y continuar
             System.out.println("Advertencia: No se pudo establecer el número de asistentes: " + e.getMessage());
         }
-        
+
         reserva.setComentarios(reservaDTO.getComentarios());
-        
+
         // Usar el estado proporcionado o establecer el predeterminado
         if (reservaDTO.getEstado() != null && !reservaDTO.getEstado().isEmpty()) {
             reserva.setEstado(reservaDTO.getEstado()); // Estado personalizado desde el frontend
         } else {
             reserva.setEstado("pendiente"); // La reserva comienza en estado pendiente por defecto
         }
-        
+
         // Usar el estado de pago proporcionado o establecerlo como pendiente
         if (reservaDTO.getEstadoPago() != null && !reservaDTO.getEstadoPago().isEmpty()) {
             reserva.setEstadoPago(reservaDTO.getEstadoPago()); // Estado de pago personalizado
@@ -110,7 +130,7 @@ public class ReservaService {
         try {
             // Obtener el precio de la instalación y convertirlo a BigDecimal
             BigDecimal precio = BigDecimal.valueOf(instalacion.getPrecio());
-            
+
             if ("online".equals(reserva.getMetodoPago()) && "pagado".equals(reserva.getEstadoPago())) {
                 // Para pagos online, generar una referencia y simular los últimos 4 dígitos
                 String referencia = "TRX-" + System.currentTimeMillis();
@@ -122,7 +142,7 @@ public class ReservaService {
             System.err.println("Error al crear el registro de pago: " + e.getMessage());
             // No detenemos el proceso aunque falle la creación del pago
         }
-        
+
         // Asegurar timestamps en la reserva
         Timestamp currentTimestamp = new Timestamp(System.currentTimeMillis());
         if (reservaGuardada.getCreatedAt() == null) {
@@ -134,7 +154,7 @@ public class ReservaService {
             reservaGuardada = reservaRepository.save(reservaGuardada);
         }return reservaGuardada;
     }
-    
+
     /**
      * Cancela una reserva de un usuario
      * @param reservaId ID de la reserva
@@ -146,16 +166,16 @@ public class ReservaService {
         // Verificar que el usuario existe
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        
+
         // Verificar que la reserva existe
         Reserva reserva = reservaRepository.findById(reservaId)
                 .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
-        
+
         // Verificar que la reserva pertenece al usuario
         if (!reserva.getUsuario().getId().equals(usuario.getId())) {
             throw new RuntimeException("La reserva no pertenece a este usuario");
         }
-        
+
         // Verificar que la reserva no esté ya cancelada
         if ("cancelada".equals(reserva.getEstado())) {
             throw new RuntimeException("La reserva ya está cancelada");
@@ -172,7 +192,7 @@ public class ReservaService {
             // y continuamos con la cancelación
             System.out.println("Advertencia: No se pudo establecer el motivo de cancelación: " + e.getMessage());
         }
-        
+
         // Guardar la reserva actualizada
         reservaRepository.save(reserva);
     }
@@ -201,12 +221,12 @@ public class ReservaService {
                 "JOIN r.usuario u " +
                 "JOIN r.instalacion i " +
                 "WHERE u.dni = :dni";
-                
+
         return entityManager.createQuery(jpql, ReservaListDTO.class)
                 .setParameter("dni", usuario.getDni())
                 .getResultList();
     }
-    
+
     /**
      * Verifica si un horario está disponible para una instalación
      * @param instalacionId ID de la instalación
@@ -215,13 +235,63 @@ public class ReservaService {
      * @param horaFin Hora de fin
      * @return true si el horario está disponible, false en caso contrario
      */
-    private boolean verificarDisponibilidadHorario(Integer instalacionId, java.sql.Date fecha, 
+    private boolean verificarDisponibilidadHorario(Integer instalacionId, java.sql.Date fecha,
                                                 java.sql.Time horaInicio, java.sql.Time horaFin) {
-        // Lógica simplificada - en un caso real, verificaríamos en la BD las reservas existentes
-        // que se solapen con el horario solicitado
-        
-        // Para esta demostración, suponemos que está disponible
-        return true;
+        // Verificar si hay reservas existentes que se solapen con el horario solicitado
+        String jpql = "SELECT COUNT(r) FROM Reserva r " +
+                      "WHERE r.instalacion.id = :instalacionId " +
+                      "AND r.fecha = :fecha " +
+                      "AND r.estado != 'cancelada' " +
+                      "AND ((r.horaInicio <= :horaInicio AND r.horaFin > :horaInicio) " +
+                      "OR (r.horaInicio < :horaFin AND r.horaFin >= :horaFin) " +
+                      "OR (r.horaInicio >= :horaInicio AND r.horaFin <= :horaFin))";
+
+        Long countReservas = entityManager.createQuery(jpql, Long.class)
+                .setParameter("instalacionId", instalacionId)
+                .setParameter("fecha", fecha)
+                .setParameter("horaInicio", horaInicio)
+                .setParameter("horaFin", horaFin)
+                .getSingleResult();
+
+        if (countReservas > 0) {
+            return false; // Ya hay reservas para este horario
+        }
+
+        // Verificar si hay bloqueos temporales activos que se solapen con el horario solicitado
+        Timestamp ahora = new Timestamp(System.currentTimeMillis());
+        List<BloqueoTemporal> bloqueos = bloqueoTemporalRepository.findActiveBlocksForTimeSlot(
+                instalacionId, fecha, horaInicio, horaFin, ahora);
+
+        return bloqueos.isEmpty(); // Si no hay bloqueos, el horario está disponible
+    }
+
+    /**
+     * Verifica si un horario entra en conflicto con las reservas existentes del usuario
+     * @param usuarioId ID del usuario
+     * @param fecha Fecha de la reserva
+     * @param horaInicio Hora de inicio
+     * @param horaFin Hora de fin
+     * @return true si hay conflicto, false en caso contrario
+     */
+    private boolean verificarConflictoHorarioUsuario(Integer usuarioId, java.sql.Date fecha,
+                                                  java.sql.Time horaInicio, java.sql.Time horaFin) {
+        // Verificar si el usuario tiene reservas existentes que se solapen con el horario solicitado
+        String jpql = "SELECT COUNT(r) FROM Reserva r " +
+                      "WHERE r.usuario.id = :usuarioId " +
+                      "AND r.fecha = :fecha " +
+                      "AND r.estado != 'cancelada' " +
+                      "AND ((r.horaInicio <= :horaInicio AND r.horaFin > :horaInicio) " +
+                      "OR (r.horaInicio < :horaFin AND r.horaFin >= :horaFin) " +
+                      "OR (r.horaInicio >= :horaInicio AND r.horaFin <= :horaFin))";
+
+        Long count = entityManager.createQuery(jpql, Long.class)
+                .setParameter("usuarioId", usuarioId)
+                .setParameter("fecha", fecha)
+                .setParameter("horaInicio", horaInicio)
+                .setParameter("horaFin", horaFin)
+                .getSingleResult();
+
+        return count > 0; // Si hay reservas solapadas, hay conflicto
     }
       /**
      * Actualiza el estado de pago de una reserva
@@ -236,28 +306,28 @@ public class ReservaService {
         // Verificar que el usuario existe
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        
+
         // Verificar que la reserva existe
         Reserva reserva = reservaRepository.findById(reservaId)
                 .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
-        
+
         // Verificar que la reserva pertenece al usuario
         if (!reserva.getUsuario().getId().equals(usuario.getId())) {
             throw new RuntimeException("La reserva no pertenece a este usuario");
         }
-        
+
         // Actualizar el estado de pago
         reserva.setEstadoPago(estadoPago);
-        
+
         // Si se proporciona un estado explícito, usarlo
         if (estado != null && !estado.isEmpty()) {
             reserva.setEstado(estado);
-        } 
+        }
         // Si no, y el pago está confirmado, también actualizar el estado de la reserva a confirmado
         else if ("pagado".equals(estadoPago)) {
             reserva.setEstado("confirmada");
         }
-        
+
         // Guardar la reserva actualizada
         return reservaRepository.save(reserva);
     }

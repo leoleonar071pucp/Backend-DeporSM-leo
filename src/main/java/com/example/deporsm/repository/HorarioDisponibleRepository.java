@@ -11,19 +11,19 @@ import java.util.List;
 @Repository
 public interface HorarioDisponibleRepository extends JpaRepository<HorarioDisponible, Integer> {
     List<HorarioDisponible> findByInstalacionId(Integer instalacionId);
-    
+
     List<HorarioDisponible> findByInstalacionIdAndDiaSemana(Integer instalacionId, HorarioDisponible.DiaSemana diaSemana);
-    
-    @Query("SELECT h FROM HorarioDisponible h WHERE h.instalacion.id = :instalacionId " + 
-           "AND h.diaSemana = :diaSemana AND h.disponible = true")
+
+    @Query("SELECT h FROM HorarioDisponible h WHERE h.instalacion.id = :instalacionId " +
+           "AND h.diaSemana = :diaSemana")
     List<HorarioDisponible> findDisponiblesByInstalacionAndDiaSemana(
             Integer instalacionId, HorarioDisponible.DiaSemana diaSemana);
-    
+
     /**
      * Query to find available time slots for a facility on a specific date
      * This takes into account existing reservations
      */
-    @Query(value = 
+    @Query(value =
            "SELECT hd.* FROM horarios_disponibles hd " +
            "WHERE hd.instalacion_id = :instalacionId " +
            "AND hd.dia_semana = :diaSemana " +
