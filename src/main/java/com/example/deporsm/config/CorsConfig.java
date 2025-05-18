@@ -16,22 +16,30 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:3000")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")  // Métodos específicos
+                        .allowedOrigins(
+                                "https://deporsm-apiwith-1035693188565.us-central1.run.app",
+                                "https://frontend-depor-sm-pyrv6rxh1-leonardo-pucps-projects.vercel.app",
+                                "https://frontend-depor-sm-leo.vercel.app",  // ✅ ESTE FALTABA EN EL FILTER
+                                "http://localhost:3000"
+                        )
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .exposedHeaders("Set-Cookie", "Authorization", "Content-Type")
                         .allowCredentials(true)
-                        .maxAge(86400); // Caché de preflight por 24 horas
+                        .maxAge(86400);
             }
         };
     }
-    // Filtro CORS adicional para garantizar que los preflight OPTIONS se manejen correctamente
+
     @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(true);
+        config.addAllowedOrigin("https://deporsm-apiwith-1035693188565.us-central1.run.app");
+        config.addAllowedOrigin("https://frontend-depor-sm-pyrv6rxh1-leonardo-pucps-projects.vercel.app");
+        config.addAllowedOrigin("https://frontend-depor-sm-leo.vercel.app"); // ✅ FALTABA ESTA LÍNEA
         config.addAllowedOrigin("http://localhost:3000");
         config.addAllowedHeader("*");
         config.addExposedHeader("Set-Cookie");
@@ -42,7 +50,7 @@ public class CorsConfig {
         config.addAllowedMethod("PUT");
         config.addAllowedMethod("DELETE");
         config.addAllowedMethod("OPTIONS");
-        config.setMaxAge(86400L); // 24 horas
+        config.setMaxAge(86400L);
 
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);

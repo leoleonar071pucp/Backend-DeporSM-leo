@@ -18,7 +18,9 @@ public class HorarioCoordinadorService {
     private HorarioCoordinadorRepository horarioCoordinadorRepository;
     
     @Autowired
-    private CoordinadorInstalacionRepository coordinadorInstalacionRepository;    public List<HorarioCoordinadorDTO> getHorariosByCoordinadorId(Integer usuarioId) {
+    private CoordinadorInstalacionRepository coordinadorInstalacionRepository;
+    
+    public List<HorarioCoordinadorDTO> getHorariosByCoordinadorId(Integer usuarioId) {
         System.out.println("Buscando horarios para el usuario ID: " + usuarioId);
         try {
             List<HorarioCoordinador> horarios = horarioCoordinadorRepository.findHorariosCoordinadorByUsuarioId(usuarioId);
@@ -34,7 +36,9 @@ public class HorarioCoordinadorService {
     public List<HorarioCoordinadorDTO> getHorariosByCoordinadorIdAndInstalacionId(Integer usuarioId, Integer instalacionId) {
         List<HorarioCoordinador> horarios = horarioCoordinadorRepository.findHorariosCoordinadorByUsuarioIdAndInstalacionId(usuarioId, instalacionId);
         return mapToDTOs(horarios);
-    }    private List<HorarioCoordinadorDTO> mapToDTOs(List<HorarioCoordinador> horarios) {
+    }
+    
+    private List<HorarioCoordinadorDTO> mapToDTOs(List<HorarioCoordinador> horarios) {
         return horarios.stream().map(horario -> {
             try {
                 HorarioCoordinadorDTO dto = new HorarioCoordinadorDTO();

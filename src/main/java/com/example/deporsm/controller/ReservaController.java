@@ -12,14 +12,20 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/reservas")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(
+  origins = {
+    "https://deporsm-apiwith-1035693188565.us-central1.run.app",
+    "https://frontend-depor-sm-leo.vercel.app",
+    "http://localhost:3000"
+  },
+  allowCredentials = "true"
+)
 public class ReservaController {
 
     @Autowired
@@ -55,10 +61,6 @@ public class ReservaController {
         return reservaRepository.getDashboardStats();
     }
 
-    @GetMapping("/recientes")
-    public List<ReservaRecienteDTO> obtenerReservasRecientes() {
-        return reservaRepository.obtenerReservasRecientes();
-    }
 
     /**
      * Crea una nueva reserva para el usuario autenticado

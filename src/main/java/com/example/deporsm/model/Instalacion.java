@@ -27,14 +27,18 @@ public class Instalacion {
 
     private String tipo;
 
-    private Integer capacidad;    @Column(name = "horario_apertura")
+    private Integer capacidad;
+    
+    @Column(name = "horario_apertura")
     private Time horarioApertura;
 
     @Column(name = "horario_cierre")
     private Time horarioCierre;
 
     @Column(name = "imagen_url")
-    private String imagenUrl;    @Column(name = "precio")
+    private String imagenUrl;
+    
+    @Column(name = "precio")
     private float precio;
 
     private Boolean activo;
@@ -73,4 +77,8 @@ public class Instalacion {
     @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<HorarioDisponible> horariosDisponibles;
+    
+    @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<CoordinadorInstalacion> coordinadores;
 }

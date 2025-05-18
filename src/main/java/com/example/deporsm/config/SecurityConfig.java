@@ -64,7 +64,13 @@ public class SecurityConfig {
                         .deleteCookies("JSESSIONID")
                         .logoutSuccessHandler((request, response, authentication) -> {
                             // Establecer headers CORS explícitamente para la respuesta de logout
-                            response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+                            String origin = request.getHeader("Origin");
+                            if (origin != null && (origin.equals("https://deporsm-apiwith-1035693188565.us-central1.run.app") 
+                                                  || origin.equals("http://localhost:3000"))) {
+                                response.setHeader("Access-Control-Allow-Origin", origin);
+                            } else {
+                                response.setHeader("Access-Control-Allow-Origin", "https://deporsm-apiwith-1035693188565.us-central1.run.app");
+                            }
                             response.setHeader("Access-Control-Allow-Credentials", "true");
                             response.setStatus(HttpServletResponse.SC_OK);
                         })

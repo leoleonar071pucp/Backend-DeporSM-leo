@@ -11,13 +11,11 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ObservacionRepository extends JpaRepository<Observacion, Integer> {
-
-    @Query(value = """
+public interface ObservacionRepository extends JpaRepository<Observacion, Integer> {    @Query(value = """
         SELECT
             o.id as idObservacion,
             i.nombre AS instalacion,
-            o.titulo AS descripcion,
+            o.descripcion AS descripcion,
             CONCAT(u.nombre, ' ', u.apellidos) AS coordinador,
             DATE_FORMAT(o.created_at, '%d/%m/%Y') AS fecha,
             o.estado AS estado,
@@ -60,12 +58,11 @@ public interface ObservacionRepository extends JpaRepository<Observacion, Intege
         LIMIT 4
     """, nativeQuery = true)
     List<ObservacionRecienteDTO> findObservacionesRecientes();
-    
-    @Query(value = """
+      @Query(value = """
         SELECT
             o.id as idObservacion,
             i.nombre AS instalacion,
-            o.titulo AS descripcion,
+            o.descripcion AS descripcion,
             CONCAT(u.nombre, ' ', u.apellidos) AS coordinador,
             DATE_FORMAT(o.created_at, '%d/%m/%Y') AS fecha,
             o.estado AS estado,

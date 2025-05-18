@@ -15,7 +15,9 @@ public class Observacion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;    @ManyToOne
+    private Integer id;
+    
+    @ManyToOne
     @JoinColumn(name = "instalacion_id")
     @JsonIgnore
     private Instalacion instalacion;

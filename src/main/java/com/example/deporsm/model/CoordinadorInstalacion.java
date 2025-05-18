@@ -19,7 +19,9 @@ public class CoordinadorInstalacion {
 
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false) // 🔧 obligatorio según SQL
-    private Usuario usuario;    @ManyToOne
+    private Usuario usuario;
+    
+    @ManyToOne
     @JoinColumn(name = "instalacion_id", nullable = false) // 🔧 obligatorio según SQL
     @JsonIgnore
     private Instalacion instalacion;
