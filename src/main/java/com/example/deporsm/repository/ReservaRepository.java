@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    // Método para listar reservas para el Admin
@@ -235,4 +236,56 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
         @Param("fechaInicio") LocalDate fechaInicio,
         @Param("fechaFin") LocalDate fechaFin,
         @Param("instalacionId") Integer instalacionId);
+
+    /**
+     * Consulta para obtener datos de ingresos mensuales para el dashboard
+     */
+    @Query(value = """
+    SELECT
+        DATE_FORMAT(r.fecha, '%b') as mes,
+        SUM(TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60) as total_ingresos
+    FROM reservas r
+    JOIN instalaciones i ON r.instalacion_id = i.id
+    WHERE r.estado_pago = 'pagado'
+    AND r.fecha >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+    GROUP BY DATE_FORMAT(r.fecha, '%Y-%m')
+    ORDER BY r.fecha ASC
+    """, nativeQuery = true)
+    List<Map<String, Object>> findIncomeByMonth();
+
+    /**
+     * Consulta para obtener datos de reservas por día de la semana para el dashboard
+     */
+    @Query(value = """
+    SELECT
+        CASE DAYOFWEEK(r.fecha)
+            WHEN 1 THEN 'Dom'
+            WHEN 2 THEN 'Lun'
+            WHEN 3 THEN 'Mar'
+            WHEN 4 THEN 'Mié'
+            WHEN 5 THEN 'Jue'
+            WHEN 6 THEN 'Vie'
+            WHEN 7 THEN 'Sáb'
+        END as dia_semana,
+        COUNT(*) as total_reservas
+    FROM reservas r
+    WHERE r.fecha >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+    GROUP BY DAYOFWEEK(r.fecha)
+    ORDER BY DAYOFWEEK(r.fecha)
+    """, nativeQuery = true)
+    List<Map<String, Object>> findReservationsByDayOfWeek();
+
+    /**
+     * Consulta para obtener datos de uso por hora para el dashboard
+     */
+    @Query(value = """
+    SELECT
+        TIME_FORMAT(hora_inicio, '%H:%i') as hora,
+        COUNT(*) as total_reservas
+    FROM reservas
+    WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+    GROUP BY HOUR(hora_inicio)
+    ORDER BY HOUR(hora_inicio)
+    """, nativeQuery = true)
+    List<Map<String, Object>> findUsageByHour();
 }

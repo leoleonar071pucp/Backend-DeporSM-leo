@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Map;
 
 public interface InstalacionRepository extends JpaRepository<Instalacion, Integer> {
 
@@ -50,7 +51,6 @@ public interface InstalacionRepository extends JpaRepository<Instalacion, Intege
     FROM instalaciones i
     WHERE i.activo = TRUE
     ORDER BY reservas_hoy DESC, i.nombre ASC
-    LIMIT 7
 """, nativeQuery = true)
     List<InstalacionEstadoDTO> getEstadoActualInstalaciones();
 
@@ -71,6 +71,21 @@ public interface InstalacionRepository extends JpaRepository<Instalacion, Intege
     """, nativeQuery = true)
     List<Instalacion> getInstalacionesPopulares();
 
-
+    /**
+     * Obtiene el número de reservas por instalación para el dashboard
+     */
+    @Query(value = """
+    SELECT
+        i.nombre as nombre,
+        COUNT(r.id) as total_reservas
+    FROM instalaciones i
+    LEFT JOIN reservas r ON i.id = r.instalacion_id
+    WHERE i.activo = TRUE
+    AND (r.fecha IS NULL OR r.fecha >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+    GROUP BY i.id, i.nombre
+    ORDER BY total_reservas DESC
+    LIMIT 5
+    """, nativeQuery = true)
+    List<Map<String, Object>> findReservationsByFacility();
 }
 

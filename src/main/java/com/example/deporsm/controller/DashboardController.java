@@ -7,12 +7,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import com.example.deporsm.repository.UsuarioRepository;
 import com.example.deporsm.repository.LogActividadRepository;
+import com.example.deporsm.repository.ReservaRepository;
+import com.example.deporsm.repository.InstalacionRepository;
+import com.example.deporsm.repository.ObservacionRepository;
 import com.example.deporsm.model.Usuario;
 import com.example.deporsm.model.LogActividad;
-import com.example.deporsm.model.Rol;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -28,9 +29,18 @@ public class DashboardController {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
-    
+
     @Autowired
     private LogActividadRepository logActividadRepository;
+
+    @Autowired
+    private ReservaRepository reservaRepository;
+
+    @Autowired
+    private InstalacionRepository instalacionRepository;
+
+    @Autowired
+    private ObservacionRepository observacionRepository;
 
     @GetMapping("/dashboard")
     public Map<String, Object> getDashboardData() {
@@ -47,7 +57,7 @@ public class DashboardController {
             .count();        long vecinoUsers = users.stream()
             .filter(u -> u.getRol().getId() == 4)
             .count();
-        
+
         dashboardData.put("totalUsers", totalUsers);
         dashboardData.put("adminUsers", adminUsers);
         dashboardData.put("coordUsers", coordUsers);
@@ -72,12 +82,12 @@ public class DashboardController {
             // Get recent activity from log_actividades
             List<LogActividad> recentActivities = logActividadRepository.findTop100ByOrderByCreatedAtDesc();
             List<Map<String, Object>> recentActivity = new ArrayList<>();
-            
+
             // Take only the first 10 activities
             recentActivities.stream().limit(10).forEach(log -> {
                 Map<String, Object> activity = new HashMap<>();
                 activity.put("id", log.getId());
-                
+
                 if (log.getUsuario() != null) {
                     activity.put("user", log.getUsuario().getNombre() + " " + log.getUsuario().getApellidos());
                     activity.put("userType", getRoleString(log.getUsuario().getRol().getId()));
@@ -85,12 +95,12 @@ public class DashboardController {
                     activity.put("user", "Usuario Desconocido");
                     activity.put("userType", "No Identificado");
                 }
-                
+
                 activity.put("action", getActionDescription(log.getAccion()));
                 activity.put("type", log.getAccion());
                 activity.put("date", formatTimeAgo(log.getCreatedAt()));
                 activity.put("status", log.getEstado());
-                
+
                 recentActivity.add(activity);
             });
 
@@ -99,7 +109,7 @@ public class DashboardController {
 
         return dashboardData;
     }
-    
+
     private String getRoleString(int roleId) {
         switch (roleId) {
             case 1: return "Superadmin";
@@ -123,13 +133,13 @@ public class DashboardController {
 
     private String formatTimeAgo(Date date) {
         if (date == null) return "fecha desconocida";
-        
+
         long diffInMillis = System.currentTimeMillis() - date.getTime();
         long seconds = diffInMillis / 1000;
         long minutes = seconds / 60;
         long hours = minutes / 60;
         long days = hours / 24;
-        
+
         if (days > 0) {
             return days + " día" + (days > 1 ? "s" : "") + " atrás";
         } else if (hours > 0) {
@@ -139,5 +149,121 @@ public class DashboardController {
         } else {
             return seconds + " segundo" + (seconds != 1 ? "s" : "") + " atrás";
         }
+    }
+
+    @GetMapping("/dashboard/charts")
+    public Map<String, Object> getDashboardCharts() {
+        Map<String, Object> chartsData = new HashMap<>();
+
+        try {
+            // Obtener datos para el gráfico de reservas por instalación
+            List<Map<String, Object>> reservationsByFacility = instalacionRepository.findReservationsByFacility();
+            List<Map<String, Object>> formattedReservationsByFacility = new ArrayList<>();
+
+            for (Map<String, Object> item : reservationsByFacility) {
+                Map<String, Object> formattedItem = new HashMap<>();
+                formattedItem.put("name", item.get("nombre"));
+                formattedItem.put("value", item.get("total_reservas"));
+                formattedReservationsByFacility.add(formattedItem);
+            }
+            chartsData.put("reservationsByFacility", formattedReservationsByFacility);
+
+            // Obtener datos para el gráfico de ingresos mensuales
+            List<Map<String, Object>> incomeByMonth = reservaRepository.findIncomeByMonth();
+            List<Map<String, Object>> formattedIncomeByMonth = new ArrayList<>();
+
+            for (Map<String, Object> item : incomeByMonth) {
+                Map<String, Object> formattedItem = new HashMap<>();
+                formattedItem.put("name", item.get("mes"));
+                formattedItem.put("value", item.get("total_ingresos"));
+                formattedIncomeByMonth.add(formattedItem);
+            }
+            chartsData.put("incomeByMonth", formattedIncomeByMonth);
+
+            // Obtener datos para el gráfico de reservas por día de la semana
+            List<Map<String, Object>> reservationsByDay = reservaRepository.findReservationsByDayOfWeek();
+            List<Map<String, Object>> formattedReservationsByDay = new ArrayList<>();
+
+            for (Map<String, Object> item : reservationsByDay) {
+                Map<String, Object> formattedItem = new HashMap<>();
+                formattedItem.put("name", item.get("dia_semana"));
+                formattedItem.put("value", item.get("total_reservas"));
+                formattedReservationsByDay.add(formattedItem);
+            }
+            chartsData.put("reservationsByDay", formattedReservationsByDay);
+
+            // Obtener datos para el gráfico de uso por hora
+            List<Map<String, Object>> usageByHour = reservaRepository.findUsageByHour();
+            List<Map<String, Object>> formattedUsageByHour = new ArrayList<>();
+
+            for (Map<String, Object> item : usageByHour) {
+                Map<String, Object> formattedItem = new HashMap<>();
+                formattedItem.put("name", item.get("hora"));
+                formattedItem.put("value", item.get("total_reservas"));
+                formattedUsageByHour.add(formattedItem);
+            }
+            chartsData.put("usageByHour", formattedUsageByHour);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            // En caso de error, devolver datos de ejemplo
+            chartsData.put("error", "Error al obtener datos de gráficos: " + e.getMessage());
+
+            // Datos de ejemplo para reservas por instalación
+            List<Map<String, Object>> sampleReservationsByFacility = new ArrayList<>();
+            sampleReservationsByFacility.add(createChartItem("Piscina Municipal", 65));
+            sampleReservationsByFacility.add(createChartItem("Cancha de Fútbol (Grass)", 85));
+            sampleReservationsByFacility.add(createChartItem("Gimnasio Municipal", 45));
+            sampleReservationsByFacility.add(createChartItem("Cancha de Fútbol (Loza)", 35));
+            sampleReservationsByFacility.add(createChartItem("Pista de Atletismo", 18));
+            chartsData.put("reservationsByFacility", sampleReservationsByFacility);
+
+            // Datos de ejemplo para ingresos mensuales
+            List<Map<String, Object>> sampleIncomeByMonth = new ArrayList<>();
+            sampleIncomeByMonth.add(createChartItem("Ene", 1200));
+            sampleIncomeByMonth.add(createChartItem("Feb", 1350));
+            sampleIncomeByMonth.add(createChartItem("Mar", 1500));
+            sampleIncomeByMonth.add(createChartItem("Abr", 1650));
+            sampleIncomeByMonth.add(createChartItem("May", 1800));
+            sampleIncomeByMonth.add(createChartItem("Jun", 1950));
+            chartsData.put("incomeByMonth", sampleIncomeByMonth);
+
+            // Datos de ejemplo para reservas por día
+            List<Map<String, Object>> sampleReservationsByDay = new ArrayList<>();
+            sampleReservationsByDay.add(createChartItem("Lun", 35));
+            sampleReservationsByDay.add(createChartItem("Mar", 28));
+            sampleReservationsByDay.add(createChartItem("Mié", 32));
+            sampleReservationsByDay.add(createChartItem("Jue", 30));
+            sampleReservationsByDay.add(createChartItem("Vie", 42));
+            sampleReservationsByDay.add(createChartItem("Sáb", 50));
+            sampleReservationsByDay.add(createChartItem("Dom", 45));
+            chartsData.put("reservationsByDay", sampleReservationsByDay);
+
+            // Datos de ejemplo para uso por hora
+            List<Map<String, Object>> sampleUsageByHour = new ArrayList<>();
+            sampleUsageByHour.add(createChartItem("8:00", 15));
+            sampleUsageByHour.add(createChartItem("9:00", 20));
+            sampleUsageByHour.add(createChartItem("10:00", 25));
+            sampleUsageByHour.add(createChartItem("11:00", 30));
+            sampleUsageByHour.add(createChartItem("12:00", 20));
+            sampleUsageByHour.add(createChartItem("13:00", 15));
+            sampleUsageByHour.add(createChartItem("14:00", 10));
+            sampleUsageByHour.add(createChartItem("15:00", 15));
+            sampleUsageByHour.add(createChartItem("16:00", 25));
+            sampleUsageByHour.add(createChartItem("17:00", 35));
+            sampleUsageByHour.add(createChartItem("18:00", 45));
+            sampleUsageByHour.add(createChartItem("19:00", 40));
+            sampleUsageByHour.add(createChartItem("20:00", 30));
+            chartsData.put("usageByHour", sampleUsageByHour);
+        }
+
+        return chartsData;
+    }
+
+    private Map<String, Object> createChartItem(String name, Number value) {
+        Map<String, Object> item = new HashMap<>();
+        item.put("name", name);
+        item.put("value", value);
+        return item;
     }
 }
