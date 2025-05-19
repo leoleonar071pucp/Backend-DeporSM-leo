@@ -150,4 +150,23 @@ public class ReservaController {
             return ResponseEntity.badRequest().body("Error al obtener detalle de reserva: " + e.getMessage());
         }
     }
+
+    /**
+     * Obtiene las reservas recientes para una instalación específica
+     */
+    @GetMapping("/instalacion/{instalacionId}")
+    public ResponseEntity<?> obtenerReservasPorInstalacion(@PathVariable Integer instalacionId) {
+        try {
+            List<ReservaRecienteDTO> reservas = reservaRepository.obtenerReservasRecientesPorInstalacion(instalacionId);
+
+            // Imprimir información de depuración
+            for (ReservaRecienteDTO reserva : reservas) {
+                System.out.println("Fecha de reserva enviada al frontend: " + reserva.getFecha());
+            }
+
+            return ResponseEntity.ok(reservas);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error al obtener reservas: " + e.getMessage());
+        }
+    }
 }

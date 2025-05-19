@@ -109,8 +109,7 @@ public class InstalacionesController {
             inst.setUbicacion(actualizada.getUbicacion());
             inst.setTipo(actualizada.getTipo());
             inst.setCapacidad(actualizada.getCapacidad());
-            inst.setHorarioApertura(actualizada.getHorarioApertura());
-            inst.setHorarioCierre(actualizada.getHorarioCierre());
+            inst.setContactoNumero(actualizada.getContactoNumero());
             inst.setImagenUrl(actualizada.getImagenUrl());
             inst.setActivo(actualizada.getActivo());
             return ResponseEntity.ok(repository.save(inst));
@@ -141,7 +140,7 @@ public class InstalacionesController {
             nuevaInstalacion.setUbicacion(request.getUbicacion());
             nuevaInstalacion.setTipo(request.getTipo());
             nuevaInstalacion.setCapacidad(request.getCapacidad());
-            nuevaInstalacion.setHorarioApertura(request.getHorarioApertura());            nuevaInstalacion.setHorarioCierre(request.getHorarioCierre());
+            nuevaInstalacion.setContactoNumero(request.getContactoNumero());
             nuevaInstalacion.setImagenUrl(request.getImagenUrl());
             nuevaInstalacion.setPrecio(request.getPrecio());
             nuevaInstalacion.setCreatedAt(now);
@@ -239,8 +238,8 @@ public class InstalacionesController {
                         detalleDTO.setUbicacion(instalacion.getUbicacion());
                         detalleDTO.setTipo(instalacion.getTipo());
                         detalleDTO.setCapacidad(instalacion.getCapacidad());
-                        detalleDTO.setHorarioApertura(instalacion.getHorarioApertura());
-                        detalleDTO.setHorarioCierre(instalacion.getHorarioCierre());                        detalleDTO.setImagenUrl(instalacion.getImagenUrl());
+                        detalleDTO.setContactoNumero(instalacion.getContactoNumero());
+                        detalleDTO.setImagenUrl(instalacion.getImagenUrl());
                         detalleDTO.setPrecio(instalacion.getPrecio());
                         detalleDTO.setActivo(instalacion.getActivo());
 
@@ -399,7 +398,6 @@ public class InstalacionesController {
                     instalacion.getUbicacion(),
                     instalacion.getTipo(),
                     instalacion.getCapacidad(),
-                    instalacion.getHorarioApertura(),                    instalacion.getHorarioCierre(),
                     instalacion.getImagenUrl(),
                     instalacion.getPrecio(),
                     instalacion.getActivo(),

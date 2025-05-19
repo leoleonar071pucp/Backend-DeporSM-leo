@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.sql.Time;
 import java.util.List;
 
 @Getter
@@ -18,19 +17,19 @@ public class InstalacionRequestDTO {
     private String ubicacion;
     private String tipo;
     private Integer capacidad;
-    private Time horarioApertura;    private Time horarioCierre;
+    private String contactoNumero;
     private String imagenUrl;
     private float precio;
     private Boolean activo;
-    
+
     // Listas para las características, comodidades y reglas
     private List<String> caracteristicas;
     private List<String> comodidades;
     private List<String> reglas;
-    
+
     // Lista de horarios disponibles
     private List<HorarioDisponibleDTO> horariosDisponibles;
-    
+
     @Getter
     @Setter
     @NoArgsConstructor

@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -28,18 +27,15 @@ public class Instalacion {
     private String tipo;
 
     private Integer capacidad;
-    
-    @Column(name = "horario_apertura")
-    private Time horarioApertura;
-
-    @Column(name = "horario_cierre")
-    private Time horarioCierre;
 
     @Column(name = "imagen_url")
     private String imagenUrl;
-    
+
     @Column(name = "precio")
     private float precio;
+
+    @Column(name = "contacto_numero")
+    private String contactoNumero;
 
     private Boolean activo;
 
@@ -65,19 +61,19 @@ public class Instalacion {
     @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<CaracteristicaInstalacion> caracteristicas;
-    
+
     @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<ComodidadInstalacion> comodidades;
-    
+
     @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<ReglaInstalacion> reglas;
-    
+
     @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<HorarioDisponible> horariosDisponibles;
-    
+
     @OneToMany(mappedBy = "instalacion", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<CoordinadorInstalacion> coordinadores;

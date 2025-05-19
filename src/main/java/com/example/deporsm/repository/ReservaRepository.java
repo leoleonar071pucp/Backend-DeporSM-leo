@@ -87,6 +87,29 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
         "WHERE r.id = :id")
     Optional<ReservaDetalleDTO> obtenerDetalleReserva(@Param("id") Integer id);
 
-
+    /**
+     * Obtiene las reservas recientes para una instalación específica
+     * Usamos DATE_FORMAT para asegurar que la fecha se envíe en formato ISO (YYYY-MM-DD)
+     */
+    @Query(value = """
+    SELECT
+        r.id AS idReserva,
+        u.nombre AS nombreUsuario,
+        i.nombre AS nombreInstalacion,
+        i.id AS instalacionId,
+        DATE_FORMAT(r.fecha, '%Y-%m-%d') AS fecha,
+        r.hora_inicio AS horaInicio,
+        r.hora_fin AS horaFin,
+        r.estado AS estado,
+        r.estado_pago AS estadoPago
+    FROM reservas r
+    JOIN usuarios u ON r.usuario_id = u.id
+    JOIN instalaciones i ON r.instalacion_id = i.id
+    WHERE r.instalacion_id = :instalacionId
+    AND r.estado != 'cancelada'
+    ORDER BY r.fecha DESC, r.hora_inicio DESC
+    LIMIT 10
+    """, nativeQuery = true)
+    List<ReservaRecienteDTO> obtenerReservasRecientesPorInstalacion(@Param("instalacionId") Integer instalacionId);
 
 }
