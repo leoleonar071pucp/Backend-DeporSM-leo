@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -137,4 +138,101 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     """, nativeQuery = true)
     List<ReservaRecienteDTO> obtenerReservasRecientesPorInstalacion(@Param("instalacionId") Integer instalacionId);
 
+    /**
+     * Consulta para obtener datos de reservas para reportes
+     */
+    @Query(value = """
+    SELECT
+        r.id,
+        CONCAT(u.nombre, ' ', u.apellidos) as usuario,
+        i.nombre as instalacion,
+        DATE_FORMAT(r.fecha, '%d/%m/%Y') as fecha,
+        TIME_FORMAT(r.hora_inicio, '%H:%i') as hora_inicio,
+        TIME_FORMAT(r.hora_fin, '%H:%i') as hora_fin,
+        r.estado,
+        r.estado_pago,
+        r.metodo_pago
+    FROM reservas r
+    JOIN usuarios u ON r.usuario_id = u.id
+    JOIN instalaciones i ON r.instalacion_id = i.id
+    WHERE r.fecha BETWEEN :fechaInicio AND :fechaFin
+    AND (:instalacionId IS NULL OR r.instalacion_id = :instalacionId)
+    ORDER BY r.fecha DESC, r.hora_inicio DESC
+    """, nativeQuery = true)
+    List<Object[]> findReservasForReport(
+        @Param("fechaInicio") LocalDate fechaInicio,
+        @Param("fechaFin") LocalDate fechaFin,
+        @Param("instalacionId") Integer instalacionId);
+
+    /**
+     * Consulta para obtener datos de ingresos para reportes
+     */
+    @Query(value = """
+    SELECT
+        DATE_FORMAT(fecha_agrupada, '%d/%m/%Y') as fecha,
+        instalacion,
+        total_reservas,
+        total_ingresos
+    FROM (
+        SELECT
+            DATE(r.fecha) as fecha_agrupada,
+            i.nombre as instalacion,
+            COUNT(r.id) as total_reservas,
+            SUM(TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60) as total_ingresos
+        FROM reservas r
+        JOIN instalaciones i ON r.instalacion_id = i.id
+        WHERE r.fecha BETWEEN :fechaInicio AND :fechaFin
+        AND r.estado_pago = 'pagado'
+        AND (:instalacionId IS NULL OR r.instalacion_id = :instalacionId)
+        GROUP BY DATE(r.fecha), i.id, i.nombre
+    ) AS subquery
+    ORDER BY fecha_agrupada DESC
+    """, nativeQuery = true)
+    List<Object[]> findIngresosForReport(
+        @Param("fechaInicio") LocalDate fechaInicio,
+        @Param("fechaFin") LocalDate fechaFin,
+        @Param("instalacionId") Integer instalacionId);
+
+    /**
+     * Consulta para obtener datos de uso de instalaciones para reportes
+     */
+    @Query(value = """
+    SELECT
+        i.nombre as instalacion,
+        COUNT(r.id) as total_reservas,
+        SUM(TIMESTAMPDIFF(HOUR, r.hora_inicio, r.hora_fin)) as horas_reservadas,
+        ROUND(
+            CASE
+                WHEN (SELECT SUM(TIMESTAMPDIFF(MINUTE, hd.hora_inicio, hd.hora_fin))
+                     FROM horarios_disponibles hd
+                     WHERE hd.instalacion_id = i.id) > 0
+                THEN
+                    (COALESCE(SUM(TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin)), 0) /
+                    (DATEDIFF(:fechaFin, :fechaInicio) + 1) /
+                    (SELECT SUM(TIMESTAMPDIFF(MINUTE, hd.hora_inicio, hd.hora_fin))
+                     FROM horarios_disponibles hd
+                     WHERE hd.instalacion_id = i.id) * 100)
+                ELSE 0
+            END, 2) as porcentaje_ocupacion,
+        (SELECT horario FROM (
+            SELECT
+                CONCAT(TIME_FORMAT(r2.hora_inicio, '%H:%i'), ' - ', TIME_FORMAT(r2.hora_fin, '%H:%i')) as horario,
+                COUNT(*) as total
+            FROM reservas r2
+            WHERE r2.instalacion_id = i.id
+            AND r2.fecha BETWEEN :fechaInicio AND :fechaFin
+            GROUP BY horario
+            ORDER BY total DESC
+            LIMIT 1
+         ) as subquery) as horario_mas_popular
+    FROM instalaciones i
+    LEFT JOIN reservas r ON i.id = r.instalacion_id AND r.fecha BETWEEN :fechaInicio AND :fechaFin
+    WHERE (:instalacionId IS NULL OR i.id = :instalacionId)
+    GROUP BY i.id, i.nombre
+    ORDER BY total_reservas DESC
+    """, nativeQuery = true)
+    List<Object[]> findInstalacionesUsageForReport(
+        @Param("fechaInicio") LocalDate fechaInicio,
+        @Param("fechaFin") LocalDate fechaFin,
+        @Param("instalacionId") Integer instalacionId);
 }

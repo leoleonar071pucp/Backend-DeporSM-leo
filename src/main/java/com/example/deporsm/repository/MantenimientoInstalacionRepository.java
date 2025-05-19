@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -87,4 +88,26 @@ public interface MantenimientoInstalacionRepository extends JpaRepository<Manten
     List<MantenimientoDTO> filtrarPorCriterios(@Param("texto") String texto,
                                                @Param("instalacionId") Integer instalacionId);
 
-    }
+    /**
+     * Consulta para obtener datos de mantenimientos para reportes
+     */
+    @Query(value = """
+    SELECT
+        m.id,
+        i.nombre as instalacion,
+        m.descripcion,
+        DATE_FORMAT(m.fecha_inicio, '%d/%m/%Y %H:%i') as fecha_inicio,
+        DATE_FORMAT(m.fecha_fin, '%d/%m/%Y %H:%i') as fecha_fin,
+        m.estado,
+        m.afecta_disponibilidad
+    FROM mantenimiento_instalaciones m
+    JOIN instalaciones i ON m.instalacion_id = i.id
+    WHERE DATE(m.fecha_inicio) BETWEEN :fechaInicio AND :fechaFin
+    AND (:instalacionId IS NULL OR m.instalacion_id = :instalacionId)
+    ORDER BY m.fecha_inicio DESC
+    """, nativeQuery = true)
+    List<Object[]> findMantenimientosForReport(
+        @Param("fechaInicio") LocalDate fechaInicio,
+        @Param("fechaFin") LocalDate fechaFin,
+        @Param("instalacionId") Integer instalacionId);
+}
