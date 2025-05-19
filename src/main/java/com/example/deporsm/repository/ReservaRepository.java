@@ -28,8 +28,33 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
             ") " +
             "FROM Reserva r " +
             "JOIN r.usuario u " +
-            "JOIN r.instalacion i")
-    List<ReservaListDTO> listarReservasParaAdmin();    // Método para buscar reservas por el DNI del usuario
+            "JOIN r.instalacion i " +
+            "ORDER BY r.fecha DESC, r.horaInicio DESC")
+    List<ReservaListDTO> listarReservasParaAdmin();
+
+    // Método para filtrar reservas por texto y fecha
+    @Query("SELECT new com.example.deporsm.dto.ReservaListDTO(" +
+            "r.id, " +
+            "u.nombre, " +
+            "i.nombre, " +
+            "i.ubicacion, " +
+            "r.metodoPago, " +
+            "i.imagenUrl, " +
+            "r.fecha, " +
+            "r.horaInicio, " +
+            "r.horaFin, " +
+            "r.estado, " +
+            "r.estadoPago" +
+            ") " +
+            "FROM Reserva r " +
+            "JOIN r.usuario u " +
+            "JOIN r.instalacion i " +
+            "WHERE (:texto IS NULL OR " +
+            "LOWER(u.nombre) LIKE LOWER(CONCAT('%', :texto, '%')) OR " +
+            "LOWER(i.nombre) LIKE LOWER(CONCAT('%', :texto, '%'))) " +
+            "AND (:fecha IS NULL OR r.fecha = :fecha) " +
+            "ORDER BY r.fecha DESC, r.horaInicio DESC")
+    List<ReservaListDTO> filtrarReservas(@Param("texto") String texto, @Param("fecha") java.sql.Date fecha);    // Método para buscar reservas por el DNI del usuario
     @Query("SELECT r FROM Reserva r JOIN r.usuario u WHERE u.dni = :dni")
     List<Reserva> findByUsuario_Dni(@Param("dni") String dni);
 

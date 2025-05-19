@@ -22,10 +22,10 @@ public class NotificacionService {
 
     @Autowired
     private NotificacionRepository notificacionRepository;
-    
+
     @Autowired
     private UsuarioRepository usuarioRepository;
-    
+
     /**
      * Obtiene todas las notificaciones de un usuario
      * @param usuarioId ID del usuario
@@ -35,7 +35,7 @@ public class NotificacionService {
         List<Notificacion> notificaciones = notificacionRepository.findByUsuarioIdOrderByFechaEnvioDesc(usuarioId);
         return convertirADTO(notificaciones);
     }
-    
+
     /**
      * Obtiene todas las notificaciones no leídas de un usuario
      * @param usuarioId ID del usuario
@@ -45,7 +45,7 @@ public class NotificacionService {
         List<Notificacion> notificaciones = notificacionRepository.findByUsuarioIdAndLeidaFalseOrderByFechaEnvioDesc(usuarioId);
         return convertirADTO(notificaciones);
     }
-    
+
     /**
      * Obtiene todas las notificaciones leídas de un usuario
      * @param usuarioId ID del usuario
@@ -55,7 +55,7 @@ public class NotificacionService {
         List<Notificacion> notificaciones = notificacionRepository.findByUsuarioIdAndLeidaTrueOrderByFechaEnvioDesc(usuarioId);
         return convertirADTO(notificaciones);
     }
-    
+
     /**
      * Marca una notificación como leída
      * @param notificacionId ID de la notificación
@@ -65,10 +65,10 @@ public class NotificacionService {
     @Transactional
     public boolean marcarComoLeida(Integer notificacionId, Integer usuarioId) {
         Optional<Notificacion> notificacionOpt = notificacionRepository.findById(notificacionId);
-        
+
         if (notificacionOpt.isPresent()) {
             Notificacion notificacion = notificacionOpt.get();
-            
+
             // Verificar que la notificación pertenezca al usuario
             if (notificacion.getUsuario().getId().equals(usuarioId)) {
                 notificacion.setLeida(true);
@@ -76,10 +76,10 @@ public class NotificacionService {
                 return true;
             }
         }
-        
+
         return false;
     }
-    
+
     /**
      * Marca todas las notificaciones de un usuario como leídas
      * @param usuarioId ID del usuario
@@ -88,7 +88,7 @@ public class NotificacionService {
     public void marcarTodasComoLeidas(Integer usuarioId) {
         notificacionRepository.markAllAsReadByUsuarioId(usuarioId);
     }
-    
+
     /**
      * Elimina una notificación
      * @param notificacionId ID de la notificación
@@ -98,20 +98,20 @@ public class NotificacionService {
     @Transactional
     public boolean eliminarNotificacion(Integer notificacionId, Integer usuarioId) {
         Optional<Notificacion> notificacionOpt = notificacionRepository.findById(notificacionId);
-        
+
         if (notificacionOpt.isPresent()) {
             Notificacion notificacion = notificacionOpt.get();
-            
+
             // Verificar que la notificación pertenezca al usuario
             if (notificacion.getUsuario().getId().equals(usuarioId)) {
                 notificacionRepository.delete(notificacion);
                 return true;
             }
         }
-        
+
         return false;
     }
-    
+
     /**
      * Elimina todas las notificaciones leídas de un usuario
      * @param usuarioId ID del usuario
@@ -120,7 +120,7 @@ public class NotificacionService {
     public void eliminarTodasLasLeidas(Integer usuarioId) {
         notificacionRepository.deleteAllReadByUsuarioId(usuarioId);
     }
-    
+
     /**
      * Crea una nueva notificación para un usuario
      * @param usuarioId ID del usuario
@@ -134,7 +134,7 @@ public class NotificacionService {
     @Transactional
     public NotificacionDTO crearNotificacion(Integer usuarioId, String titulo, String mensaje, String tipo, String categoria, String feedback) {
         Optional<Usuario> usuarioOpt = usuarioRepository.findById(usuarioId);
-        
+
         if (usuarioOpt.isPresent()) {
             Notificacion notificacion = new Notificacion();
             notificacion.setUsuario(usuarioOpt.get());
@@ -145,14 +145,27 @@ public class NotificacionService {
             notificacion.setFechaEnvio(new Timestamp(System.currentTimeMillis()));
             notificacion.setCategoria(categoria);
             notificacion.setFeedback(feedback);
-            
+
             Notificacion guardada = notificacionRepository.save(notificacion);
             return convertirADTO(guardada);
         }
-        
+
         return null;
     }
-    
+
+    /**
+     * Método simplificado para crear una notificación con solo los campos esenciales
+     * @param usuarioId ID del usuario
+     * @param titulo Título de la notificación
+     * @param mensaje Mensaje de la notificación
+     * @param tipo Tipo de notificación
+     * @return La notificación creada
+     */
+    @Transactional
+    public NotificacionDTO crearNotificacion(Integer usuarioId, String titulo, String mensaje, String tipo) {
+        return crearNotificacion(usuarioId, titulo, mensaje, tipo, null, null);
+    }
+
     /**
      * Convierte una lista de entidades Notificacion a DTOs
      * @param notificaciones Lista de notificaciones
@@ -163,7 +176,7 @@ public class NotificacionService {
                 .map(this::convertirADTO)
                 .collect(Collectors.toList());
     }
-    
+
     /**
      * Convierte una entidad Notificacion a DTO
      * @param notificacion Notificación
@@ -176,16 +189,16 @@ public class NotificacionService {
         dto.setMensaje(notificacion.getMensaje());
         dto.setTipo(notificacion.getTipo());
         dto.setLeida(notificacion.getLeida());
-        
+
         // Formatear la fecha
         if (notificacion.getFechaEnvio() != null) {
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
             dto.setFechaEnvio(sdf.format(notificacion.getFechaEnvio()));
         }
-        
+
         dto.setCategoria(notificacion.getCategoria());
         dto.setFeedback(notificacion.getFeedback());
-        
+
         return dto;
     }
 }

@@ -31,10 +31,16 @@ public class MantenimientoInstalacion {
     @Column(nullable = false)
     private String motivo;
 
+    @Column(name = "tipo")
+    private String tipo; // valores posibles: preventivo, correctivo, mejora
+
     private String descripcion;
 
     @Column(name = "estado")
-    private String estado = "programado"; // valores posibles: programado, en-progreso, completado, cancelado
+    private String estado; // valores posibles: programado, en-progreso, completado, cancelado
+
+    @Column(name = "afecta_disponibilidad")
+    private Boolean afectaDisponibilidad; // indica si el mantenimiento afecta la disponibilidad de la instalación
 
 
     @ManyToOne(fetch = FetchType.LAZY)

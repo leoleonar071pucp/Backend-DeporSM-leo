@@ -40,6 +40,7 @@ public class InstalacionesController {
     private final ReglaInstalacionRepository reglaRepository;
     private final HorarioDisponibleRepository horarioDisponibleRepository;
     private final CoordinadorInstalacionRepository coordinadorInstalacionRepository;
+    private final MantenimientoInstalacionRepository mantenimientoRepository;
     private final BloqueoTemporalService bloqueoTemporalService;
 
     public InstalacionesController(
@@ -49,6 +50,7 @@ public class InstalacionesController {
             ReglaInstalacionRepository reglaRepository,
             HorarioDisponibleRepository horarioDisponibleRepository,
             CoordinadorInstalacionRepository coordinadorInstalacionRepository,
+            MantenimientoInstalacionRepository mantenimientoRepository,
             BloqueoTemporalService bloqueoTemporalService) {
         this.repository = repository;
         this.caracteristicaRepository = caracteristicaRepository;
@@ -56,6 +58,7 @@ public class InstalacionesController {
         this.reglaRepository = reglaRepository;
         this.horarioDisponibleRepository = horarioDisponibleRepository;
         this.coordinadorInstalacionRepository = coordinadorInstalacionRepository;
+        this.mantenimientoRepository = mantenimientoRepository;
         this.bloqueoTemporalService = bloqueoTemporalService;
     }
 
@@ -211,6 +214,30 @@ public class InstalacionesController {
     @GetMapping("/estado-instalaciones")
     public List<InstalacionEstadoDTO> obtenerEstadoActualDeInstalaciones() {
         return repository.getEstadoActualInstalaciones();
+    }
+
+    /**
+     * Obtiene las instalaciones que están actualmente en mantenimiento
+     */
+    @GetMapping("/en-mantenimiento")
+    public List<Instalacion> obtenerInstalacionesEnMantenimiento() {
+        try {
+            // Obtener todas las instalaciones
+            List<Instalacion> todasInstalaciones = repository.findAll();
+
+            // Filtrar las instalaciones que tienen mantenimientos en progreso
+            List<Instalacion> instalacionesEnMantenimiento = todasInstalaciones.stream()
+                .filter(instalacion -> {
+                    List<MantenimientoInstalacion> mantenimientosActivos =
+                        mantenimientoRepository.findByInstalacionIdAndEstado(instalacion.getId(), "en-progreso");
+                    return !mantenimientosActivos.isEmpty();
+                })
+                .collect(Collectors.toList());
+
+            return instalacionesEnMantenimiento;
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
     }
 
     /**

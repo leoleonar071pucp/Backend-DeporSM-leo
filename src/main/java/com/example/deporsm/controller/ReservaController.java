@@ -62,6 +62,58 @@ public class ReservaController {
     }
 
     /**
+     * Obtiene todas las reservas para el administrador
+     */
+    @GetMapping("/admin")
+    public ResponseEntity<?> obtenerReservasParaAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()
+            || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body("Usuario no autenticado");
+        }
+
+        try {
+            List<ReservaListDTO> reservas = reservaRepository.listarReservasParaAdmin();
+            return ResponseEntity.ok(reservas);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error al obtener reservas: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Filtra reservas por texto y fecha para el administrador
+     */
+    @GetMapping("/admin/filtrar")
+    public ResponseEntity<?> filtrarReservasParaAdmin(
+            @RequestParam(required = false) String texto,
+            @RequestParam(required = false) String fecha) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()
+            || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body("Usuario no autenticado");
+        }
+
+        try {
+            java.sql.Date fechaSql = null;
+            if (fecha != null && !fecha.isEmpty()) {
+                try {
+                    fechaSql = java.sql.Date.valueOf(fecha);
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest().body("Formato de fecha inválido. Use YYYY-MM-DD");
+                }
+            }
+
+            List<ReservaListDTO> reservas = reservaRepository.filtrarReservas(texto, fechaSql);
+            return ResponseEntity.ok(reservas);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error al filtrar reservas: " + e.getMessage());
+        }
+    }
+
+    /**
      * Obtiene las reservas más recientes para mostrar en la página de inicio
      */
     @GetMapping("/recientes")
@@ -105,10 +157,41 @@ public class ReservaController {
 
         String email = authentication.getName();
         try {
-            reservaService.cancelarReserva(id, email, motivo);
+            // Imprimir información de depuración
+            System.out.println("Cancelando reserva ID: " + id + ", Usuario: " + email + ", Motivo: " + (motivo != null ? motivo : "No especificado"));
+
+            // Llamar al servicio sin motivo si es null
+            reservaService.cancelarReserva(id, email, null);
             return ResponseEntity.ok("Reserva cancelada correctamente");
         } catch (Exception e) {
+            System.out.println("Error al cancelar reserva: " + e.getMessage());
             return ResponseEntity.badRequest().body("Error al cancelar reserva: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Aprueba una reserva (cambia su estado a confirmada y su estado de pago a pagado)
+     * Solo para administradores
+     */
+    @PutMapping("/{id}/aprobar")
+    public ResponseEntity<?> aprobarReserva(@PathVariable Integer id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()
+            || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body("Usuario no autenticado");
+        }
+
+        String email = authentication.getName();
+        try {
+            // Imprimir información de depuración
+            System.out.println("Aprobando reserva ID: " + id + ", Usuario: " + email);
+
+            reservaService.aprobarReserva(id, email);
+            return ResponseEntity.ok("Reserva aprobada correctamente");
+        } catch (Exception e) {
+            System.out.println("Error al aprobar reserva: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Error al aprobar reserva: " + e.getMessage());
         }
     }
       /**
