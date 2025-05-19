@@ -22,13 +22,13 @@ public interface MantenimientoInstalacionRepository extends JpaRepository<Manten
     List<MantenimientoInstalacion> findByInstalacion(Instalacion instalacion);
 
     // --- Segmentación por tiempo ---
-    @Query("SELECT m FROM MantenimientoInstalacion m WHERE :fechaActual BETWEEN m.fechaInicio AND m.fechaFin")
+    @Query("SELECT m FROM MantenimientoInstalacion m WHERE :fechaActual BETWEEN m.fechaInicio AND m.fechaFin AND m.estado != 'cancelado'")
     List<MantenimientoInstalacion> findActivos(@Param("fechaActual") LocalDateTime fechaActual);
 
-    @Query("SELECT m FROM MantenimientoInstalacion m WHERE m.fechaInicio > :fechaActual")
+    @Query("SELECT m FROM MantenimientoInstalacion m WHERE m.fechaInicio > :fechaActual AND m.estado != 'cancelado'")
     List<MantenimientoInstalacion> findProgramados(@Param("fechaActual") LocalDateTime fechaActual);
 
-    @Query("SELECT m FROM MantenimientoInstalacion m WHERE m.fechaFin < :fechaActual")
+    @Query("SELECT m FROM MantenimientoInstalacion m WHERE m.fechaFin < :fechaActual OR m.estado = 'cancelado'")
     List<MantenimientoInstalacion> findFinalizados(@Param("fechaActual") LocalDateTime fechaActual);
 
     // --- Filtro múltiple general por texto, tipo, estado e instalación ---
@@ -40,6 +40,7 @@ public interface MantenimientoInstalacionRepository extends JpaRepository<Manten
         m.descripcion,
         m.fechaInicio,
         m.fechaFin,
+        m.estado,
         m.instalacion.nombre,
         m.instalacion.ubicacion
     )
@@ -52,4 +53,3 @@ public interface MantenimientoInstalacionRepository extends JpaRepository<Manten
                                                @Param("instalacionId") Integer instalacionId);
 
     }
-    

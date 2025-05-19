@@ -8,12 +8,26 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 public class CorsConfig {
 
+    // Orígenes permitidos desde la configuración
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
-    private String allowedOriginsString;    @Bean
+    private String allowedOriginsString;
+
+    // Lista de encabezados expuestos
+    private static final List<String> EXPOSED_HEADERS = Arrays.asList(
+        "Set-Cookie",
+        "Authorization",
+        "Content-Type",
+        "Access-Control-Allow-Origin",
+        "Access-Control-Allow-Credentials"
+    );
+
+    @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override
@@ -25,16 +39,19 @@ public class CorsConfig {
                         .allowedOrigins(origins)
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
-                        .exposedHeaders("Set-Cookie", "Authorization", "Content-Type")
+                        .exposedHeaders(String.join(",", EXPOSED_HEADERS))
                         .allowCredentials(true)
                         .maxAge(86400);
             }
         };
-    }    @Bean
+    }
+
+    @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
+        // Habilitar credenciales
         config.setAllowCredentials(true);
 
         // Agregar todos los orígenes permitidos desde la configuración
@@ -42,15 +59,21 @@ public class CorsConfig {
         for (String origin : origins) {
             config.addAllowedOrigin(origin.trim());
         }
+
+        // Configurar encabezados y métodos
         config.addAllowedHeader("*");
-        config.addExposedHeader("Set-Cookie");
-        config.addExposedHeader("Authorization");
-        config.addExposedHeader("Content-Type");
+
+        // Exponer encabezados específicos
+        EXPOSED_HEADERS.forEach(config::addExposedHeader);
+
+        // Permitir todos los métodos HTTP comunes
         config.addAllowedMethod("GET");
         config.addAllowedMethod("POST");
         config.addAllowedMethod("PUT");
         config.addAllowedMethod("DELETE");
         config.addAllowedMethod("OPTIONS");
+
+        // Tiempo de caché para respuestas preflight
         config.setMaxAge(86400L);
 
         source.registerCorsConfiguration("/**", config);
