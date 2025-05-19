@@ -132,7 +132,7 @@ public class SecurityConfig {
 
             // En producción: secure=true para HTTPS
             // En desarrollo: secure=false para HTTP local
-            sessionCookieConfig.setSecure(isProduction);
+            sessionCookieConfig.setSecure(true);
 
             sessionCookieConfig.setMaxAge(86400); // 24 horas para mayor duración
             sessionCookieConfig.setName("JSESSIONID"); // Asegurarse que el nombre sea consistente
@@ -151,7 +151,7 @@ public class SecurityConfig {
 
             // En producción: SameSite=None para permitir cookies cross-site
             // En desarrollo: SameSite=Lax para mejor compatibilidad local
-            processor.setSameSiteCookies(isProduction ? "None" : "Lax");
+            processor.setSameSiteCookies("None");
 
             // Imprimir información de depuración
             System.out.println("🍪 Configuración de cookies:");
