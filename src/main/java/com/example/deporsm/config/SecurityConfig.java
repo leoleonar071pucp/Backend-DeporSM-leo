@@ -153,6 +153,13 @@ public class SecurityConfig {
             // En desarrollo: SameSite=Lax para mejor compatibilidad local
             processor.setSameSiteCookies(isProduction ? "None" : "Lax");
 
+            // Imprimir información de depuración
+            System.out.println("🍪 Configuración de cookies:");
+            System.out.println("   - Perfil activo: " + (activeProfile != null ? activeProfile : "no definido"));
+            System.out.println("   - Modo producción: " + isProduction);
+            System.out.println("   - SameSite: " + (isProduction ? "None" : "Lax"));
+            System.out.println("   - Secure: " + isProduction);
+
             context.setCookieProcessor(processor);
         });
     }
