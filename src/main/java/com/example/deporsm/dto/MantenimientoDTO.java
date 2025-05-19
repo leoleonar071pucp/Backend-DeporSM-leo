@@ -8,6 +8,7 @@ public class MantenimientoDTO {
     private String descripcion;
     private LocalDateTime fechaInicio;
     private LocalDateTime fechaFin;
+    private String estado;
 
     private String instalacionNombre;
     private String instalacionUbicacion;
@@ -15,12 +16,13 @@ public class MantenimientoDTO {
     // 👇 Este constructor debe ser público y coincidir EXACTAMENTE en ORDEN Y TIPO
     public MantenimientoDTO(Integer id, String motivo, String descripcion,
                             LocalDateTime fechaInicio, LocalDateTime fechaFin,
-                            String instalacionNombre, String instalacionUbicacion) {
+                            String estado, String instalacionNombre, String instalacionUbicacion) {
         this.id = id;
         this.motivo = motivo;
         this.descripcion = descripcion;
         this.fechaInicio = fechaInicio;
         this.fechaFin = fechaFin;
+        this.estado = estado;
         this.instalacionNombre = instalacionNombre;
         this.instalacionUbicacion = instalacionUbicacion;
     }
@@ -31,6 +33,7 @@ public class MantenimientoDTO {
     public String getDescripcion() { return descripcion; }
     public LocalDateTime getFechaInicio() { return fechaInicio; }
     public LocalDateTime getFechaFin() { return fechaFin; }
+    public String getEstado() { return estado; }
     public String getInstalacionNombre() { return instalacionNombre; }
     public String getInstalacionUbicacion() { return instalacionUbicacion; }
 }

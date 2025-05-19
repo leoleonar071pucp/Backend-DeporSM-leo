@@ -49,23 +49,86 @@ import java.util.List;
 
     // Mantenimientos activos: fecha actual dentro del rango
     @GetMapping("/activos")
-    public List<MantenimientoInstalacion> obtenerActivos(@RequestParam("fechaActual")
-                                                         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaActual) {
-        return mantenimientoRepository.findActivos(fechaActual);
+    public ResponseEntity<List<MantenimientoDTO>> obtenerActivos(
+            @RequestParam(value = "fechaActual", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaActual) {
+
+        // Si no se proporciona fecha, usar la fecha actual
+        if (fechaActual == null) {
+            fechaActual = LocalDateTime.now();
+        }
+
+        List<MantenimientoInstalacion> mantenimientos = mantenimientoRepository.findActivos(fechaActual);
+        List<MantenimientoDTO> dtos = mantenimientos.stream()
+            .map(m -> new MantenimientoDTO(
+                m.getId(),
+                m.getMotivo(),
+                m.getDescripcion(),
+                m.getFechaInicio(),
+                m.getFechaFin(),
+                m.getEstado(),
+                m.getInstalacion().getNombre(),
+                m.getInstalacion().getUbicacion()
+            ))
+            .toList();
+
+        return ResponseEntity.ok(dtos);
     }
 
     // Mantenimientos programados: fecha futura
     @GetMapping("/programados")
-    public List<MantenimientoInstalacion> obtenerProgramados(@RequestParam("fechaActual")
-                                                             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaActual) {
-        return mantenimientoRepository.findProgramados(fechaActual);
+    public ResponseEntity<List<MantenimientoDTO>> obtenerProgramados(
+            @RequestParam(value = "fechaActual", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaActual) {
+
+        // Si no se proporciona fecha, usar la fecha actual
+        if (fechaActual == null) {
+            fechaActual = LocalDateTime.now();
+        }
+
+        List<MantenimientoInstalacion> mantenimientos = mantenimientoRepository.findProgramados(fechaActual);
+        List<MantenimientoDTO> dtos = mantenimientos.stream()
+            .map(m -> new MantenimientoDTO(
+                m.getId(),
+                m.getMotivo(),
+                m.getDescripcion(),
+                m.getFechaInicio(),
+                m.getFechaFin(),
+                m.getEstado(),
+                m.getInstalacion().getNombre(),
+                m.getInstalacion().getUbicacion()
+            ))
+            .toList();
+
+        return ResponseEntity.ok(dtos);
     }
 
     // Mantenimientos históricos: ya finalizados
     @GetMapping("/historial")
-    public List<MantenimientoInstalacion> obtenerHistorial(@RequestParam("fechaActual")
-                                                           @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaActual) {
-        return mantenimientoRepository.findFinalizados(fechaActual);
+    public ResponseEntity<List<MantenimientoDTO>> obtenerHistorial(
+            @RequestParam(value = "fechaActual", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaActual) {
+
+        // Si no se proporciona fecha, usar la fecha actual
+        if (fechaActual == null) {
+            fechaActual = LocalDateTime.now();
+        }
+
+        List<MantenimientoInstalacion> mantenimientos = mantenimientoRepository.findFinalizados(fechaActual);
+        List<MantenimientoDTO> dtos = mantenimientos.stream()
+            .map(m -> new MantenimientoDTO(
+                m.getId(),
+                m.getMotivo(),
+                m.getDescripcion(),
+                m.getFechaInicio(),
+                m.getFechaFin(),
+                m.getEstado(),
+                m.getInstalacion().getNombre(),
+                m.getInstalacion().getUbicacion()
+            ))
+            .toList();
+
+        return ResponseEntity.ok(dtos);
     }
 
     @PostMapping
@@ -104,14 +167,24 @@ import java.util.List;
         }).orElse(ResponseEntity.notFound().build());
     }
 
-
-
-
-
-
-
-
-
-
-
+    /**
+     * Cancela un mantenimiento programado
+     * @param id ID del mantenimiento a cancelar
+     * @return ResponseEntity con el resultado de la operación
+     */
+    @PutMapping("/{id}/cancelar")
+    public ResponseEntity<?> cancelarMantenimiento(@PathVariable Integer id) {
+        return mantenimientoRepository.findById(id).map(mantenimiento -> {
+            // Verificar que el mantenimiento esté en estado programado
+            if (mantenimiento.getEstado() == null || "programado".equals(mantenimiento.getEstado())) {
+                mantenimiento.setEstado("cancelado");
+                mantenimiento.setUpdatedAt(LocalDateTime.now());
+                mantenimientoRepository.save(mantenimiento);
+                return ResponseEntity.ok().build();
+            } else {
+                return ResponseEntity.badRequest()
+                    .body("Solo se pueden cancelar mantenimientos en estado 'programado'");
+            }
+        }).orElse(ResponseEntity.notFound().build());
+    }
 }

@@ -33,6 +33,9 @@ public class MantenimientoInstalacion {
 
     private String descripcion;
 
+    @Column(name = "estado")
+    private String estado = "programado"; // valores posibles: programado, en-progreso, completado, cancelado
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registrado_por", nullable = false)
