@@ -12,6 +12,11 @@ import java.util.Map;
 
 public interface InstalacionRepository extends JpaRepository<Instalacion, Integer> {
 
+    /**
+     * Encuentra todas las instalaciones activas
+     */
+    List<Instalacion> findByActivoTrue();
+
     List<InstalacionDTO> findByTipo(String tipo);
 
     List<Instalacion> findByActivo(Boolean activo);
@@ -31,8 +36,8 @@ public interface InstalacionRepository extends JpaRepository<Instalacion, Intege
 
     @Query(value = """
     SELECT
-        i.id AS id_instalacion,
-        i.nombre AS nombre_instalacion,
+        i.id AS idInstalacion,
+        i.nombre AS nombreInstalacion,
         CASE
             WHEN EXISTS (
                 SELECT 1
@@ -46,11 +51,12 @@ public interface InstalacionRepository extends JpaRepository<Instalacion, Intege
             SELECT COUNT(*)
             FROM reservas r
             WHERE r.instalacion_id = i.id
-              AND DATE(r.fecha) = CURDATE()
-        ) AS reservas_hoy
+              AND DATE(r.created_at) = CURDATE()
+              AND r.estado != 'cancelada'
+        ) AS reservasHoy
     FROM instalaciones i
     WHERE i.activo = TRUE
-    ORDER BY reservas_hoy DESC, i.nombre ASC
+    ORDER BY reservasHoy DESC, i.nombre ASC
 """, nativeQuery = true)
     List<InstalacionEstadoDTO> getEstadoActualInstalaciones();
 
@@ -73,6 +79,8 @@ public interface InstalacionRepository extends JpaRepository<Instalacion, Intege
 
     /**
      * Obtiene el número de reservas por instalación para el dashboard
+     * Incluye todas las instalaciones y todos los estados de reserva (incluyendo canceladas)
+     * Muestra el conteo exacto de reservas tal como aparece en la base de datos
      */
     @Query(value = """
     SELECT
@@ -80,10 +88,8 @@ public interface InstalacionRepository extends JpaRepository<Instalacion, Intege
         COUNT(r.id) as total_reservas
     FROM instalaciones i
     LEFT JOIN reservas r ON i.id = r.instalacion_id
-    WHERE i.activo = TRUE
-    AND (r.fecha IS NULL OR r.fecha >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
     GROUP BY i.id, i.nombre
-    ORDER BY total_reservas DESC
+    ORDER BY total_reservas DESC, i.nombre ASC
     LIMIT 5
     """, nativeQuery = true)
     List<Map<String, Object>> findReservationsByFacility();

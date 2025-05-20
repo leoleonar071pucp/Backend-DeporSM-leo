@@ -26,23 +26,28 @@ import java.util.List;
 @Service
 public class MantenimientoService {
 
-    @Autowired
-    private MantenimientoInstalacionRepository mantenimientoRepository;
+    private final MantenimientoInstalacionRepository mantenimientoRepository;
+    private final InstalacionRepository instalacionRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final ReservaRepository reservaRepository;
+    private final NotificacionService notificacionService;
+    private final EntityManager entityManager;
 
     @Autowired
-    private InstalacionRepository instalacionRepository;
-
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
-    @Autowired
-    private ReservaRepository reservaRepository;
-
-    @Autowired
-    private NotificacionService notificacionService;
-
-    @PersistenceContext
-    private EntityManager entityManager;
+    public MantenimientoService(
+            MantenimientoInstalacionRepository mantenimientoRepository,
+            InstalacionRepository instalacionRepository,
+            UsuarioRepository usuarioRepository,
+            ReservaRepository reservaRepository,
+            NotificacionService notificacionService,
+            EntityManager entityManager) {
+        this.mantenimientoRepository = mantenimientoRepository;
+        this.instalacionRepository = instalacionRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.reservaRepository = reservaRepository;
+        this.notificacionService = notificacionService;
+        this.entityManager = entityManager;
+    }
 
     /**
      * Programa un mantenimiento para una instalación y cancela las reservas afectadas

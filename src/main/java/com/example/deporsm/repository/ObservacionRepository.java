@@ -9,9 +9,32 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 
 @Repository
-public interface ObservacionRepository extends JpaRepository<Observacion, Integer> {    @Query(value = """
+public interface ObservacionRepository extends JpaRepository<Observacion, Integer> {
+
+    @Query(value = """
+        SELECT
+            i.nombre as instalacion,
+            COUNT(o.id) as cantidad
+        FROM observaciones o
+        JOIN instalaciones i ON o.instalacion_id = i.id
+        GROUP BY i.nombre
+        ORDER BY cantidad DESC
+        LIMIT 5
+    """, nativeQuery = true)
+    List<Map<String, Object>> findObservacionesPorInstalacion();
+
+    @Query(value = """
+        SELECT
+            m.estado as estado,
+            COUNT(m.id) as cantidad
+        FROM mantenimiento_instalaciones m
+        GROUP BY m.estado
+        ORDER BY cantidad DESC
+    """, nativeQuery = true)
+    List<Map<String, Object>> findEstadoMantenimientos();    @Query(value = """
         SELECT
             o.id as idObservacion,
             i.nombre AS instalacion,
@@ -22,11 +45,11 @@ public interface ObservacionRepository extends JpaRepository<Observacion, Intege
             o.prioridad AS prioridad,
             i.ubicacion AS ubicacion,
             o.fotos_url AS fotosUrl
-        FROM 
+        FROM
             deportes_sm.observaciones o
-        INNER JOIN 
+        INNER JOIN
             deportes_sm.instalaciones i ON o.instalacion_id = i.id
-        INNER JOIN 
+        INNER JOIN
             deportes_sm.usuarios u ON o.usuario_id = u.id
         ORDER BY
             o.created_at DESC
@@ -46,7 +69,7 @@ List<Object[]> findAllObservacionesRaw();    default List<ObservacionDTO> findAl
             ))
             .toList();
 }@Query(value = """
-        SELECT 
+        SELECT
             o.id AS idObservacion,
             i.nombre AS nombreInstalacion,
             o.descripcion,
@@ -68,11 +91,11 @@ List<ObservacionRecienteDTO> findObservacionesRecientes();      @Query(value = "
             o.prioridad AS prioridad,
             i.ubicacion AS ubicacion,
             o.fotos_url AS fotosUrl
-        FROM 
+        FROM
             observaciones o
-        INNER JOIN 
+        INNER JOIN
             instalaciones i ON o.instalacion_id = i.id
-        INNER JOIN 
+        INNER JOIN
             usuarios u ON o.usuario_id = u.id
         INNER JOIN
             coordinadores_instalaciones ci ON ci.instalacion_id = i.id

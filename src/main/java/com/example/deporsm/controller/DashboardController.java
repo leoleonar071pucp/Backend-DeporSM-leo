@@ -12,8 +12,13 @@ import com.example.deporsm.repository.InstalacionRepository;
 import com.example.deporsm.repository.ObservacionRepository;
 import com.example.deporsm.model.Usuario;
 import com.example.deporsm.model.LogActividad;
+import com.example.deporsm.model.Instalacion;
 
 import java.util.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -41,6 +46,9 @@ public class DashboardController {
 
     @Autowired
     private ObservacionRepository observacionRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @GetMapping("/dashboard")
     public Map<String, Object> getDashboardData() {
@@ -156,29 +164,215 @@ public class DashboardController {
         Map<String, Object> chartsData = new HashMap<>();
 
         try {
-            // Obtener datos para el gráfico de reservas por instalación
-            List<Map<String, Object>> reservationsByFacility = instalacionRepository.findReservationsByFacility();
-            List<Map<String, Object>> formattedReservationsByFacility = new ArrayList<>();
+            try {
+                // Obtener datos para el gráfico de reservas por instalación
+                List<Map<String, Object>> reservationsByFacility = instalacionRepository.findReservationsByFacility();
+                List<Map<String, Object>> formattedReservationsByFacility = new ArrayList<>();
 
-            for (Map<String, Object> item : reservationsByFacility) {
-                Map<String, Object> formattedItem = new HashMap<>();
-                formattedItem.put("name", item.get("nombre"));
-                formattedItem.put("value", item.get("total_reservas"));
-                formattedReservationsByFacility.add(formattedItem);
+                System.out.println("Datos de reservas por instalación (raw): " + reservationsByFacility);
+
+                // Imprimir cada instalación y su conteo para depuración
+                if (reservationsByFacility != null) {
+                    System.out.println("Desglose de reservas por instalación:");
+                    for (Map<String, Object> item : reservationsByFacility) {
+                        System.out.println("  - " + item.get("nombre") + ": " + item.get("total_reservas"));
+                    }
+                }
+
+                if (reservationsByFacility != null && !reservationsByFacility.isEmpty()) {
+                    for (Map<String, Object> item : reservationsByFacility) {
+                        Map<String, Object> formattedItem = new HashMap<>();
+                        formattedItem.put("name", item.get("nombre"));
+                        // Asegurarse de que el valor sea un número
+                        Object totalReservas = item.get("total_reservas");
+                        if (totalReservas instanceof Number) {
+                            formattedItem.put("value", totalReservas);
+                        } else if (totalReservas != null) {
+                            try {
+                                formattedItem.put("value", Long.parseLong(totalReservas.toString()));
+                            } catch (NumberFormatException e) {
+                                formattedItem.put("value", 0);
+                            }
+                        } else {
+                            formattedItem.put("value", 0);
+                        }
+                        formattedReservationsByFacility.add(formattedItem);
+                    }
+                }
+
+                // Si no hay datos, agregar al menos una instalación con valor 0
+                if (formattedReservationsByFacility.isEmpty()) {
+                    // Intentar obtener algunas instalaciones activas
+                    try {
+                        List<Instalacion> instalaciones = instalacionRepository.findByActivoTrue();
+                        if (instalaciones != null && !instalaciones.isEmpty()) {
+                            // Mostrar hasta 5 instalaciones activas con valor 0
+                            int count = 0;
+                            for (Instalacion instalacion : instalaciones) {
+                                Map<String, Object> emptyItem = new HashMap<>();
+                                emptyItem.put("name", instalacion.getNombre());
+                                emptyItem.put("value", 0);
+                                formattedReservationsByFacility.add(emptyItem);
+                                count++;
+                                if (count >= 5) break;
+                            }
+                        } else {
+                            // Si no hay instalaciones activas, mostrar mensaje genérico
+                            Map<String, Object> emptyItem = new HashMap<>();
+                            emptyItem.put("name", "Sin reservas");
+                            emptyItem.put("value", 0);
+                            formattedReservationsByFacility.add(emptyItem);
+                        }
+                    } catch (Exception e) {
+                        // En caso de error, mostrar mensaje genérico
+                        Map<String, Object> emptyItem = new HashMap<>();
+                        emptyItem.put("name", "Sin reservas");
+                        emptyItem.put("value", 0);
+                        formattedReservationsByFacility.add(emptyItem);
+                    }
+                }
+
+                chartsData.put("reservationsByFacility", formattedReservationsByFacility);
+            } catch (Exception e) {
+                System.err.println("Error al obtener datos de reservas por instalación: " + e.getMessage());
+                // En caso de error, proporcionar datos mínimos
+                List<Map<String, Object>> emptyList = new ArrayList<>();
+                Map<String, Object> emptyItem = new HashMap<>();
+                emptyItem.put("name", "Error al cargar datos");
+                emptyItem.put("value", 0);
+                emptyList.add(emptyItem);
+                chartsData.put("reservationsByFacility", emptyList);
             }
-            chartsData.put("reservationsByFacility", formattedReservationsByFacility);
 
-            // Obtener datos para el gráfico de ingresos mensuales
+            // Obtener datos para el gráfico de ingresos diarios
             List<Map<String, Object>> incomeByMonth = reservaRepository.findIncomeByMonth();
             List<Map<String, Object>> formattedIncomeByMonth = new ArrayList<>();
 
-            for (Map<String, Object> item : incomeByMonth) {
-                Map<String, Object> formattedItem = new HashMap<>();
-                formattedItem.put("name", item.get("mes"));
-                formattedItem.put("value", item.get("total_ingresos"));
-                formattedIncomeByMonth.add(formattedItem);
+            System.out.println("Datos de ingresos diarios (raw): " + incomeByMonth);
+
+            // Imprimir cada día y su ingreso para depuración
+            if (incomeByMonth != null) {
+                System.out.println("Desglose de ingresos diarios:");
+                for (Map<String, Object> item : incomeByMonth) {
+                    System.out.println("  - " + item.get("fecha") + ": " + item.get("total_ingresos"));
+                }
+            }
+
+            if (incomeByMonth != null && !incomeByMonth.isEmpty()) {
+                for (Map<String, Object> item : incomeByMonth) {
+                    Map<String, Object> formattedItem = new HashMap<>();
+                    formattedItem.put("name", item.get("fecha"));
+
+                    // Asegurarse de que el valor sea un número
+                    Object totalIngresos = item.get("total_ingresos");
+                    if (totalIngresos instanceof Number) {
+                        // Redondear a 2 decimales para mejor visualización
+                        double value = ((Number) totalIngresos).doubleValue();
+                        formattedItem.put("value", Math.round(value * 100) / 100.0);
+                    } else if (totalIngresos != null) {
+                        try {
+                            double value = Double.parseDouble(totalIngresos.toString());
+                            formattedItem.put("value", Math.round(value * 100) / 100.0);
+                        } catch (NumberFormatException e) {
+                            formattedItem.put("value", 0);
+                        }
+                    } else {
+                        formattedItem.put("value", 0);
+                    }
+
+                    formattedIncomeByMonth.add(formattedItem);
+                }
+            } else {
+                // Si no hay datos, agregar algunos puntos de ejemplo para los últimos 30 días
+                LocalDate today = LocalDate.now();
+                for (int i = 29; i >= 0; i--) {
+                    LocalDate date = today.minusDays(i);
+                    Map<String, Object> emptyItem = new HashMap<>();
+                    emptyItem.put("name", date.format(DateTimeFormatter.ofPattern("dd/MM")));
+                    emptyItem.put("value", 0);
+                    formattedIncomeByMonth.add(emptyItem);
+                }
             }
             chartsData.put("incomeByMonth", formattedIncomeByMonth);
+
+            // Obtener datos para el gráfico de ingresos por instalación
+            try {
+                List<Map<String, Object>> incomeByFacility = reservaRepository.findIncomeByFacility();
+                List<Map<String, Object>> formattedIncomeByFacility = new ArrayList<>();
+
+                System.out.println("Datos de ingresos por instalación (raw): " + incomeByFacility);
+
+                // Imprimir cada instalación y su ingreso para depuración
+                if (incomeByFacility != null) {
+                    System.out.println("Desglose de ingresos por instalación:");
+                    for (Map<String, Object> item : incomeByFacility) {
+                        System.out.println("  - " + item.get("nombre") + ": " + item.get("total_ingresos"));
+                    }
+                }
+
+                if (incomeByFacility != null && !incomeByFacility.isEmpty()) {
+                    for (Map<String, Object> item : incomeByFacility) {
+                        Map<String, Object> formattedItem = new HashMap<>();
+                        formattedItem.put("name", item.get("nombre"));
+                        // Asegurarse de que el valor sea un número
+                        Object totalIngresos = item.get("total_ingresos");
+                        if (totalIngresos instanceof Number) {
+                            formattedItem.put("value", totalIngresos);
+                        } else if (totalIngresos != null) {
+                            try {
+                                formattedItem.put("value", Double.parseDouble(totalIngresos.toString()));
+                            } catch (NumberFormatException e) {
+                                formattedItem.put("value", 0);
+                            }
+                        } else {
+                            formattedItem.put("value", 0);
+                        }
+                        formattedIncomeByFacility.add(formattedItem);
+                    }
+                }
+
+                // Si no hay datos, agregar al menos una instalación con valor 0
+                if (formattedIncomeByFacility.isEmpty()) {
+                    try {
+                        List<Instalacion> instalaciones = instalacionRepository.findByActivoTrue();
+                        if (instalaciones != null && !instalaciones.isEmpty()) {
+                            // Mostrar hasta 5 instalaciones activas con valor 0
+                            int count = 0;
+                            for (Instalacion instalacion : instalaciones) {
+                                Map<String, Object> emptyItem = new HashMap<>();
+                                emptyItem.put("name", instalacion.getNombre());
+                                emptyItem.put("value", 0);
+                                formattedIncomeByFacility.add(emptyItem);
+                                count++;
+                                if (count >= 5) break;
+                            }
+                        } else {
+                            // Si no hay instalaciones activas, mostrar mensaje genérico
+                            Map<String, Object> emptyItem = new HashMap<>();
+                            emptyItem.put("name", "Sin ingresos");
+                            emptyItem.put("value", 0);
+                            formattedIncomeByFacility.add(emptyItem);
+                        }
+                    } catch (Exception e) {
+                        // En caso de error, mostrar mensaje genérico
+                        Map<String, Object> emptyItem = new HashMap<>();
+                        emptyItem.put("name", "Sin ingresos");
+                        emptyItem.put("value", 0);
+                        formattedIncomeByFacility.add(emptyItem);
+                    }
+                }
+
+                chartsData.put("incomeByFacility", formattedIncomeByFacility);
+            } catch (Exception e) {
+                System.err.println("Error al obtener datos de ingresos por instalación: " + e.getMessage());
+                // En caso de error, proporcionar datos mínimos
+                List<Map<String, Object>> emptyList = new ArrayList<>();
+                Map<String, Object> emptyItem = new HashMap<>();
+                emptyItem.put("name", "Error al cargar datos");
+                emptyItem.put("value", 0);
+                emptyList.add(emptyItem);
+                chartsData.put("incomeByFacility", emptyList);
+            }
 
             // Obtener datos para el gráfico de reservas por día de la semana
             List<Map<String, Object>> reservationsByDay = reservaRepository.findReservationsByDayOfWeek();
@@ -192,69 +386,170 @@ public class DashboardController {
             }
             chartsData.put("reservationsByDay", formattedReservationsByDay);
 
-            // Obtener datos para el gráfico de uso por hora
-            List<Map<String, Object>> usageByHour = reservaRepository.findUsageByHour();
+            // No necesitamos datos de uso por hora para la interfaz actual
+            // Proporcionamos un array vacío para evitar errores en el frontend
             List<Map<String, Object>> formattedUsageByHour = new ArrayList<>();
-
-            for (Map<String, Object> item : usageByHour) {
-                Map<String, Object> formattedItem = new HashMap<>();
-                formattedItem.put("name", item.get("hora"));
-                formattedItem.put("value", item.get("total_reservas"));
-                formattedUsageByHour.add(formattedItem);
-            }
+            Map<String, Object> emptyItem = new HashMap<>();
+            emptyItem.put("name", "Sin datos");
+            emptyItem.put("value", 0);
+            formattedUsageByHour.add(emptyItem);
             chartsData.put("usageByHour", formattedUsageByHour);
+
+            // Obtener datos para el gráfico de reservas por estado
+            List<Map<String, Object>> reservationsByStatus = reservaRepository.findReservationsByStatus();
+            List<Map<String, Object>> formattedReservationsByStatus = new ArrayList<>();
+
+            for (Map<String, Object> item : reservationsByStatus) {
+                Map<String, Object> formattedItem = new HashMap<>();
+                String estado = (String) item.get("name");
+                // Capitalizar primera letra del estado
+                if (estado != null && !estado.isEmpty()) {
+                    estado = estado.substring(0, 1).toUpperCase() + estado.substring(1);
+                }
+                formattedItem.put("name", estado);
+                formattedItem.put("value", item.get("value"));
+                formattedReservationsByStatus.add(formattedItem);
+            }
+            chartsData.put("reservationsByStatus", formattedReservationsByStatus);
+
+            // Obtener datos para el gráfico de observaciones por instalación
+            try {
+                // Consulta para obtener observaciones por instalación
+                List<Map<String, Object>> observacionesPorInstalacion = observacionRepository.findObservacionesPorInstalacion();
+                List<Map<String, Object>> formattedObservacionesPorInstalacion = new ArrayList<>();
+
+                if (observacionesPorInstalacion != null && !observacionesPorInstalacion.isEmpty()) {
+                    for (Map<String, Object> item : observacionesPorInstalacion) {
+                        Map<String, Object> formattedItem = new HashMap<>();
+                        formattedItem.put("name", item.get("instalacion"));
+                        formattedItem.put("value", item.get("cantidad"));
+                        formattedObservacionesPorInstalacion.add(formattedItem);
+                    }
+                } else {
+                    // Si no hay datos, agregar un elemento vacío
+                    formattedObservacionesPorInstalacion.add(createChartItem("Sin observaciones", 0));
+                }
+
+                chartsData.put("observacionesPorInstalacion", formattedObservacionesPorInstalacion);
+            } catch (Exception e) {
+                System.err.println("Error al obtener observaciones por instalación: " + e.getMessage());
+                List<Map<String, Object>> emptyList = new ArrayList<>();
+                emptyList.add(createChartItem("Sin datos", 0));
+                chartsData.put("observacionesPorInstalacion", emptyList);
+            }
+
+            // Obtener datos para el gráfico de estado de mantenimientos
+            try {
+                // Consulta para obtener estado de mantenimientos
+                List<Map<String, Object>> estadoMantenimientos = observacionRepository.findEstadoMantenimientos();
+                List<Map<String, Object>> formattedEstadoMantenimientos = new ArrayList<>();
+
+                if (estadoMantenimientos != null && !estadoMantenimientos.isEmpty()) {
+                    for (Map<String, Object> item : estadoMantenimientos) {
+                        Map<String, Object> formattedItem = new HashMap<>();
+                        String estado = (String) item.get("estado");
+                        // Capitalizar primera letra del estado
+                        if (estado != null && !estado.isEmpty()) {
+                            estado = estado.substring(0, 1).toUpperCase() + estado.substring(1);
+                        }
+                        formattedItem.put("name", estado);
+                        formattedItem.put("value", item.get("cantidad"));
+                        formattedEstadoMantenimientos.add(formattedItem);
+                    }
+                } else {
+                    // Si no hay datos, agregar elementos con los estados posibles
+                    formattedEstadoMantenimientos.add(createChartItem("Programado", 0));
+                    formattedEstadoMantenimientos.add(createChartItem("En progreso", 0));
+                    formattedEstadoMantenimientos.add(createChartItem("Completado", 0));
+                    formattedEstadoMantenimientos.add(createChartItem("Cancelado", 0));
+                }
+
+                chartsData.put("estadoMantenimientos", formattedEstadoMantenimientos);
+            } catch (Exception e) {
+                System.err.println("Error al obtener estado de mantenimientos: " + e.getMessage());
+                List<Map<String, Object>> emptyList = new ArrayList<>();
+                emptyList.add(createChartItem("Programado", 0));
+                emptyList.add(createChartItem("En progreso", 0));
+                emptyList.add(createChartItem("Completado", 0));
+                emptyList.add(createChartItem("Cancelado", 0));
+                chartsData.put("estadoMantenimientos", emptyList);
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
-            // En caso de error, devolver datos de ejemplo
-            chartsData.put("error", "Error al obtener datos de gráficos: " + e.getMessage());
+            // Registrar el error detallado
+            System.err.println("Error al obtener datos de gráficos: " + e.getMessage());
+            if (e.getCause() != null) {
+                System.err.println("Causa: " + e.getCause().getMessage());
+            }
 
-            // Datos de ejemplo para reservas por instalación
-            List<Map<String, Object>> sampleReservationsByFacility = new ArrayList<>();
-            sampleReservationsByFacility.add(createChartItem("Piscina Municipal", 65));
-            sampleReservationsByFacility.add(createChartItem("Cancha de Fútbol (Grass)", 85));
-            sampleReservationsByFacility.add(createChartItem("Gimnasio Municipal", 45));
-            sampleReservationsByFacility.add(createChartItem("Cancha de Fútbol (Loza)", 35));
-            sampleReservationsByFacility.add(createChartItem("Pista de Atletismo", 18));
-            chartsData.put("reservationsByFacility", sampleReservationsByFacility);
+            // Crear un mensaje de error detallado
+            StringBuilder errorDetail = new StringBuilder();
+            errorDetail.append("Error al obtener datos de gráficos: ").append(e.getMessage());
 
-            // Datos de ejemplo para ingresos mensuales
-            List<Map<String, Object>> sampleIncomeByMonth = new ArrayList<>();
-            sampleIncomeByMonth.add(createChartItem("Ene", 1200));
-            sampleIncomeByMonth.add(createChartItem("Feb", 1350));
-            sampleIncomeByMonth.add(createChartItem("Mar", 1500));
-            sampleIncomeByMonth.add(createChartItem("Abr", 1650));
-            sampleIncomeByMonth.add(createChartItem("May", 1800));
-            sampleIncomeByMonth.add(createChartItem("Jun", 1950));
-            chartsData.put("incomeByMonth", sampleIncomeByMonth);
+            if (e.getCause() != null) {
+                errorDetail.append("\nCausa: ").append(e.getCause().getMessage());
+            }
 
-            // Datos de ejemplo para reservas por día
-            List<Map<String, Object>> sampleReservationsByDay = new ArrayList<>();
-            sampleReservationsByDay.add(createChartItem("Lun", 35));
-            sampleReservationsByDay.add(createChartItem("Mar", 28));
-            sampleReservationsByDay.add(createChartItem("Mié", 32));
-            sampleReservationsByDay.add(createChartItem("Jue", 30));
-            sampleReservationsByDay.add(createChartItem("Vie", 42));
-            sampleReservationsByDay.add(createChartItem("Sáb", 50));
-            sampleReservationsByDay.add(createChartItem("Dom", 45));
-            chartsData.put("reservationsByDay", sampleReservationsByDay);
+            // Incluir stack trace para depuración
+            errorDetail.append("\nStack trace: ");
+            for (StackTraceElement element : e.getStackTrace()) {
+                errorDetail.append("\n  ").append(element.toString());
+                // Limitar a las primeras 10 líneas del stack trace
+                if (errorDetail.toString().split("\n").length > 10) {
+                    errorDetail.append("\n  ...");
+                    break;
+                }
+            }
 
-            // Datos de ejemplo para uso por hora
-            List<Map<String, Object>> sampleUsageByHour = new ArrayList<>();
-            sampleUsageByHour.add(createChartItem("8:00", 15));
-            sampleUsageByHour.add(createChartItem("9:00", 20));
-            sampleUsageByHour.add(createChartItem("10:00", 25));
-            sampleUsageByHour.add(createChartItem("11:00", 30));
-            sampleUsageByHour.add(createChartItem("12:00", 20));
-            sampleUsageByHour.add(createChartItem("13:00", 15));
-            sampleUsageByHour.add(createChartItem("14:00", 10));
-            sampleUsageByHour.add(createChartItem("15:00", 15));
-            sampleUsageByHour.add(createChartItem("16:00", 25));
-            sampleUsageByHour.add(createChartItem("17:00", 35));
-            sampleUsageByHour.add(createChartItem("18:00", 45));
-            sampleUsageByHour.add(createChartItem("19:00", 40));
-            sampleUsageByHour.add(createChartItem("20:00", 30));
-            chartsData.put("usageByHour", sampleUsageByHour);
+            chartsData.put("error", errorDetail.toString());
+
+            // Proporcionar datos mínimos para que la interfaz no se rompa
+            // Reservas por instalación (vacío pero válido)
+            List<Map<String, Object>> emptyReservationsByFacility = new ArrayList<>();
+            emptyReservationsByFacility.add(createChartItem("Sin datos", 0));
+            chartsData.put("reservationsByFacility", emptyReservationsByFacility);
+
+            // Ingresos mensuales (vacío pero válido)
+            List<Map<String, Object>> emptyIncomeByMonth = new ArrayList<>();
+            emptyIncomeByMonth.add(createChartItem("Sin datos", 0));
+            chartsData.put("incomeByMonth", emptyIncomeByMonth);
+
+            // Ingresos por instalación (vacío pero válido)
+            List<Map<String, Object>> emptyIncomeByFacility = new ArrayList<>();
+            emptyIncomeByFacility.add(createChartItem("Sin datos", 0));
+            chartsData.put("incomeByFacility", emptyIncomeByFacility);
+
+            // Reservas por día (vacío pero válido)
+            List<Map<String, Object>> emptyReservationsByDay = new ArrayList<>();
+            emptyReservationsByDay.add(createChartItem("Sin datos", 0));
+            chartsData.put("reservationsByDay", emptyReservationsByDay);
+
+            // Uso por hora (vacío pero válido)
+            List<Map<String, Object>> emptyUsageByHour = new ArrayList<>();
+            emptyUsageByHour.add(createChartItem("Sin datos", 0));
+            chartsData.put("usageByHour", emptyUsageByHour);
+
+            // Reservas por estado (con los 4 estados pero valores en 0)
+            List<Map<String, Object>> emptyReservationsByStatus = new ArrayList<>();
+            emptyReservationsByStatus.add(createChartItem("Pendientes", 0));
+            emptyReservationsByStatus.add(createChartItem("Confirmadas", 0));
+            emptyReservationsByStatus.add(createChartItem("Completadas", 0));
+            emptyReservationsByStatus.add(createChartItem("Canceladas", 0));
+            chartsData.put("reservationsByStatus", emptyReservationsByStatus);
+
+            // Observaciones por instalación (vacío pero válido)
+            List<Map<String, Object>> emptyObservacionesPorInstalacion = new ArrayList<>();
+            emptyObservacionesPorInstalacion.add(createChartItem("Sin datos", 0));
+            chartsData.put("observacionesPorInstalacion", emptyObservacionesPorInstalacion);
+
+            // Estado de mantenimientos (con los 4 estados pero valores en 0)
+            List<Map<String, Object>> emptyEstadoMantenimientos = new ArrayList<>();
+            emptyEstadoMantenimientos.add(createChartItem("Programado", 0));
+            emptyEstadoMantenimientos.add(createChartItem("En progreso", 0));
+            emptyEstadoMantenimientos.add(createChartItem("Completado", 0));
+            emptyEstadoMantenimientos.add(createChartItem("Cancelado", 0));
+            chartsData.put("estadoMantenimientos", emptyEstadoMantenimientos);
         }
 
         return chartsData;

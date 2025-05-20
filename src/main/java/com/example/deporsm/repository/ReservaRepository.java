@@ -84,9 +84,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     FROM reservas r
     JOIN usuarios u ON r.usuario_id = u.id
     JOIN instalaciones i ON r.instalacion_id = i.id
-    WHERE r.estado != 'cancelada'
-    ORDER BY r.fecha DESC, r.hora_inicio DESC
-    LIMIT 50
+    ORDER BY r.created_at DESC
+    LIMIT 5
     """, nativeQuery = true)
     List<ReservaRecienteDTO> obtenerReservasRecientes();
 
@@ -238,20 +237,53 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
         @Param("instalacionId") Integer instalacionId);
 
     /**
-     * Consulta para obtener datos de ingresos mensuales para el dashboard
+     * Consulta para obtener datos de ingresos diarios para el dashboard
+     * Muestra los últimos 30 días con datos diarios, incluyendo días sin ingresos
+     */
+    @Query(value = """
+    WITH RECURSIVE DateRange AS (
+        SELECT DATE_SUB(CURDATE(), INTERVAL 29 DAY) as date
+        UNION ALL
+        SELECT DATE_ADD(date, INTERVAL 1 DAY)
+        FROM DateRange
+        WHERE date < CURDATE()
+    ),
+    DailyIncome AS (
+        SELECT
+            r.fecha as fecha,
+            SUM(TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60) as total_ingresos
+        FROM reservas r
+        JOIN instalaciones i ON r.instalacion_id = i.id
+        WHERE r.estado_pago = 'pagado'
+        AND r.fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        GROUP BY r.fecha
+    )
+    SELECT
+        DATE_FORMAT(d.date, '%d/%m') as fecha,
+        COALESCE(di.total_ingresos, 0) as total_ingresos
+    FROM DateRange d
+    LEFT JOIN DailyIncome di ON d.date = di.fecha
+    ORDER BY d.date ASC
+    """, nativeQuery = true)
+    List<Map<String, Object>> findIncomeByMonth();
+
+    /**
+     * Consulta para obtener datos de ingresos por instalación para el dashboard
      */
     @Query(value = """
     SELECT
-        DATE_FORMAT(r.fecha, '%b') as mes,
-        SUM(TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60) as total_ingresos
-    FROM reservas r
-    JOIN instalaciones i ON r.instalacion_id = i.id
-    WHERE r.estado_pago = 'pagado'
-    AND r.fecha >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-    GROUP BY DATE_FORMAT(r.fecha, '%Y-%m')
-    ORDER BY r.fecha ASC
+        i.nombre as nombre,
+        COALESCE(SUM(CASE WHEN r.estado_pago = 'pagado'
+                         THEN TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60
+                         ELSE 0
+                    END), 0) as total_ingresos
+    FROM instalaciones i
+    LEFT JOIN reservas r ON i.id = r.instalacion_id AND r.fecha >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+    GROUP BY i.id, i.nombre
+    ORDER BY total_ingresos DESC
+    LIMIT 5
     """, nativeQuery = true)
-    List<Map<String, Object>> findIncomeByMonth();
+    List<Map<String, Object>> findIncomeByFacility();
 
     /**
      * Consulta para obtener datos de reservas por día de la semana para el dashboard
@@ -270,22 +302,72 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
         COUNT(*) as total_reservas
     FROM reservas r
     WHERE r.fecha >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
-    GROUP BY DAYOFWEEK(r.fecha)
+    GROUP BY dia_semana, DAYOFWEEK(r.fecha)
     ORDER BY DAYOFWEEK(r.fecha)
     """, nativeQuery = true)
     List<Map<String, Object>> findReservationsByDayOfWeek();
 
     /**
      * Consulta para obtener datos de uso por hora para el dashboard
+     * Modificada para ser completamente compatible con sql_mode=only_full_group_by
      */
     @Query(value = """
     SELECT
-        TIME_FORMAT(hora_inicio, '%H:%i') as hora,
-        COUNT(*) as total_reservas
-    FROM reservas
-    WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
-    GROUP BY HOUR(hora_inicio)
-    ORDER BY HOUR(hora_inicio)
+        horas.hora as hora,
+        COALESCE(conteo.total_reservas, 0) as total_reservas
+    FROM (
+        SELECT 0 as hora_num, '00:00' as hora
+        UNION SELECT 1, '01:00' UNION SELECT 2, '02:00' UNION SELECT 3, '03:00'
+        UNION SELECT 4, '04:00' UNION SELECT 5, '05:00' UNION SELECT 6, '06:00'
+        UNION SELECT 7, '07:00' UNION SELECT 8, '08:00' UNION SELECT 9, '09:00'
+        UNION SELECT 10, '10:00' UNION SELECT 11, '11:00' UNION SELECT 12, '12:00'
+        UNION SELECT 13, '13:00' UNION SELECT 14, '14:00' UNION SELECT 15, '15:00'
+        UNION SELECT 16, '16:00' UNION SELECT 17, '17:00' UNION SELECT 18, '18:00'
+        UNION SELECT 19, '19:00' UNION SELECT 20, '20:00' UNION SELECT 21, '21:00'
+        UNION SELECT 22, '22:00' UNION SELECT 23, '23:00'
+    ) horas
+    LEFT JOIN (
+        SELECT
+            HOUR(hora_inicio) as hora_num,
+            COUNT(*) as total_reservas
+        FROM reservas
+        WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+        GROUP BY HOUR(hora_inicio)
+    ) conteo ON horas.hora_num = conteo.hora_num
+    ORDER BY horas.hora_num
     """, nativeQuery = true)
     List<Map<String, Object>> findUsageByHour();
+
+    /**
+     * Consulta para obtener datos de reservas por estado para el dashboard
+     * Asegurando que siempre se muestren los 4 estados (pendiente, confirmada, cancelada, completada)
+     */
+    @Query(value = """
+    SELECT
+        estados.estado as name,
+        COALESCE(conteo.total, 0) as value
+    FROM (
+        SELECT 'pendiente' as estado
+        UNION SELECT 'confirmada'
+        UNION SELECT 'cancelada'
+        UNION SELECT 'completada'
+    ) estados
+    LEFT JOIN (
+        SELECT
+            estado,
+            COUNT(*) as total
+        FROM reservas
+        WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+        GROUP BY estado
+    ) conteo ON estados.estado = conteo.estado
+    ORDER BY
+        CASE
+            WHEN estados.estado = 'pendiente' THEN 1
+            WHEN estados.estado = 'confirmada' THEN 2
+            WHEN estados.estado = 'completada' THEN 3
+            WHEN estados.estado = 'cancelada' THEN 4
+            ELSE 5
+        END
+    """, nativeQuery = true)
+    List<Map<String, Object>> findReservationsByStatus();
 }
