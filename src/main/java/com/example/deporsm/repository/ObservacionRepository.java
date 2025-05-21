@@ -38,6 +38,7 @@ public interface ObservacionRepository extends JpaRepository<Observacion, Intege
         SELECT
             o.id as idObservacion,
             i.nombre AS instalacion,
+            o.titulo AS titulo,
             o.descripcion AS descripcion,
             CONCAT(u.nombre, ' ', u.apellidos) AS coordinador,
             DATE_FORMAT(o.created_at, '%d/%m/%Y') AS fecha,
@@ -65,7 +66,8 @@ List<Object[]> findAllObservacionesRaw();    default List<ObservacionDTO> findAl
                     (String) row[5],
                     (String) row[6],
                     (String) row[7],
-                    (String) row[8]
+                    (String) row[8],
+                    (String) row[9]
             ))
             .toList();
 }@Query(value = """
@@ -84,6 +86,7 @@ List<ObservacionRecienteDTO> findObservacionesRecientes();      @Query(value = "
         SELECT
             o.id as idObservacion,
             i.nombre AS instalacion,
+            o.titulo AS titulo,
             o.descripcion AS descripcion,
             CONCAT(u.nombre, ' ', u.apellidos) AS coordinador,
             DATE_FORMAT(o.created_at, '%d/%m/%Y') AS fecha,
@@ -116,9 +119,17 @@ List<Object[]> findObservacionesByCoordinadorId(Integer usuarioId);
                         (String) row[5],
                         (String) row[6],
                         (String) row[7],
-                        (String) row[8]
+                        (String) row[8],
+                        (String) row[9]
                 ))
                 .toList();
     }
 
+    /**
+     * Busca observaciones por instalación y estado
+     * @param instalacionId ID de la instalación
+     * @param estado Estado de la observación
+     * @return Lista de observaciones que cumplen con los criterios
+     */
+    List<Observacion> findByInstalacionIdAndEstado(Integer instalacionId, String estado);
 }

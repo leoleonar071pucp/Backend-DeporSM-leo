@@ -166,6 +166,14 @@ import java.util.stream.Collectors;
                 return ResponseEntity.badRequest().body("Usuario que registra no especificado");
             }
 
+            // Imprimir información detallada de las fechas recibidas
+            System.out.println("=== INFORMACIÓN DE FECHAS Y HORAS RECIBIDAS ===");
+            System.out.println("Fecha inicio recibida: " + requestDTO.getFechaInicio());
+            System.out.println("Fecha fin recibida: " + requestDTO.getFechaFin());
+            System.out.println("Zona horaria del servidor: " + java.util.TimeZone.getDefault().getID());
+            System.out.println("Hora actual del servidor: " + java.time.LocalDateTime.now());
+            System.out.println("==============================================");
+
             // Usar el servicio para programar el mantenimiento y cancelar reservas afectadas
             MantenimientoInstalacion guardado = mantenimientoService.programarMantenimiento(requestDTO);
             return ResponseEntity.ok(guardado);

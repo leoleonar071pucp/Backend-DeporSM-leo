@@ -363,7 +363,7 @@ public class InstalacionesController {
                     System.out.println("Verificando disponibilidad para horario: " +
                                       horario.getHoraInicio() + " - " + horario.getHoraFin());
 
-                    // Verificar si el horario está bloqueado temporalmente
+                    // Verificar si el horario está bloqueado temporalmente o afectado por mantenimiento
                     boolean disponible = bloqueoTemporalService.verificarDisponibilidadHorario(
                         id,
                         fecha,
@@ -371,15 +371,73 @@ public class InstalacionesController {
                         horario.getHoraFin()
                     );
 
-                    System.out.println("Horario " + horario.getHoraInicio() + " - " + horario.getHoraFin() +
-                                      " disponible: " + disponible);
+                    // Verificar específicamente si hay mantenimientos que afectan este horario
+                    System.out.println("=== VERIFICANDO MANTENIMIENTOS PARA HORARIO ===");
+                    System.out.println("Instalación ID: " + id);
+                    System.out.println("Fecha: " + fecha);
+                    System.out.println("Horario: " + horario.getHoraInicio() + " - " + horario.getHoraFin());
 
-                    // Siempre añadir el horario, pero marcarlo como bloqueado si no está disponible
-                    DisponibilidadHorarioDTO.RangoHorarioDTO rangoDTO = new DisponibilidadHorarioDTO.RangoHorarioDTO(
+                    List<MantenimientoInstalacion> mantenimientos = mantenimientoRepository.findMantenimientosQueAfectanHorario(
+                        id,
+                        fecha,
                         horario.getHoraInicio(),
-                        horario.getHoraFin(),
-                        !disponible // bloqueadoTemporalmente = !disponible
+                        horario.getHoraFin()
                     );
+
+                    System.out.println("Mantenimientos encontrados: " + mantenimientos.size());
+                    for (MantenimientoInstalacion m : mantenimientos) {
+                        System.out.println("  - ID: " + m.getId() +
+                                          ", Inicio: " + m.getFechaInicio() +
+                                          ", Fin: " + m.getFechaFin() +
+                                          ", Estado: " + m.getEstado());
+                    }
+                    System.out.println("===========================================");
+
+                    boolean enMantenimiento = !mantenimientos.isEmpty();
+                    String razonBloqueo = null;
+
+                    if (enMantenimiento) {
+                        // Si hay mantenimiento, obtener información para mostrar al usuario
+                        MantenimientoInstalacion mantenimiento = mantenimientos.get(0);
+                        razonBloqueo = "Mantenimiento programado: " + mantenimiento.getDescripcion();
+                        System.out.println("Horario " + horario.getHoraInicio() + " - " + horario.getHoraFin() +
+                                          " no disponible por mantenimiento: " + mantenimiento.getDescripcion());
+                    } else {
+                        System.out.println("Horario " + horario.getHoraInicio() + " - " + horario.getHoraFin() +
+                                          " disponible: " + disponible);
+                    }
+
+                    // Siempre añadir el horario, pero marcarlo como bloqueado según corresponda
+                    DisponibilidadHorarioDTO.RangoHorarioDTO rangoDTO;
+
+                    if (enMantenimiento) {
+                        // Si hay mantenimiento, marcar como en mantenimiento (prioridad sobre bloqueo temporal)
+                        rangoDTO = new DisponibilidadHorarioDTO.RangoHorarioDTO(
+                            horario.getHoraInicio(),
+                            horario.getHoraFin(),
+                            false, // No es un bloqueo temporal
+                            true,  // Está en mantenimiento
+                            razonBloqueo
+                        );
+                    } else if (!disponible) {
+                        // Si no está disponible por bloqueo temporal u otra razón
+                        rangoDTO = new DisponibilidadHorarioDTO.RangoHorarioDTO(
+                            horario.getHoraInicio(),
+                            horario.getHoraFin(),
+                            true,  // Es un bloqueo temporal
+                            false, // No está en mantenimiento
+                            null
+                        );
+                    } else {
+                        // Si está disponible
+                        rangoDTO = new DisponibilidadHorarioDTO.RangoHorarioDTO(
+                            horario.getHoraInicio(),
+                            horario.getHoraFin(),
+                            false, // No es un bloqueo temporal
+                            false, // No está en mantenimiento
+                            null
+                        );
+                    }
                     horarios.add(rangoDTO);
                 }
             } else {

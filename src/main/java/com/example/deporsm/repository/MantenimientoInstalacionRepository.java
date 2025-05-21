@@ -110,4 +110,56 @@ public interface MantenimientoInstalacionRepository extends JpaRepository<Manten
         @Param("fechaInicio") LocalDate fechaInicio,
         @Param("fechaFin") LocalDate fechaFin,
         @Param("instalacionId") Integer instalacionId);
+
+    /**
+     * Busca mantenimientos activos (programados o en progreso) que afectan la disponibilidad
+     * y se solapan con un horario específico
+     *
+     * La consulta verifica cuatro casos de solapamiento:
+     * 1. Mantenimiento que comienza y termina en el mismo día que el horario solicitado:
+     *    - Verifica si hay solapamiento entre el horario y el período de mantenimiento
+     *
+     * 2. Mantenimiento que comienza en el día del horario solicitado y termina en un día posterior:
+     *    - Bloquea cualquier horario cuya hora de fin sea posterior a la hora de inicio del mantenimiento
+     *    - Esto garantiza que se bloqueen todos los horarios que se solapan con el mantenimiento
+     *
+     * 3. Mantenimiento que comenzó en un día anterior y termina en el día del horario solicitado:
+     *    - Bloquea cualquier horario cuya hora de inicio sea anterior a la hora de fin del mantenimiento
+     *
+     * 4. Mantenimiento que abarca completamente el día del horario solicitado:
+     *    - Bloquea todos los horarios de ese día
+     *
+     * @param instalacionId ID de la instalación
+     * @param fecha Fecha en formato SQL Date
+     * @param horaInicio Hora de inicio en formato SQL Time
+     * @param horaFin Hora de fin en formato SQL Time
+     * @return Lista de mantenimientos que se solapan con el horario especificado
+     */
+    @Query("""
+    SELECT m FROM MantenimientoInstalacion m
+    WHERE m.instalacion.id = :instalacionId
+    AND (m.estado = 'programado' OR m.estado = 'en-progreso')
+    AND m.afectaDisponibilidad = true
+    AND (
+        (CAST(:fecha AS date) = CAST(m.fechaInicio AS date) AND CAST(:fecha AS date) = CAST(m.fechaFin AS date)
+         AND (
+            (CAST(m.fechaInicio AS time) <= :horaInicio AND CAST(m.fechaFin AS time) > :horaInicio) OR
+            (CAST(m.fechaInicio AS time) < :horaFin AND CAST(m.fechaFin AS time) >= :horaFin) OR
+            (CAST(m.fechaInicio AS time) >= :horaInicio AND CAST(m.fechaFin AS time) <= :horaFin)
+         ))
+        OR
+        (CAST(:fecha AS date) = CAST(m.fechaInicio AS date) AND CAST(:fecha AS date) < CAST(m.fechaFin AS date)
+         AND :horaFin > CAST(m.fechaInicio AS time))
+        OR
+        (CAST(:fecha AS date) > CAST(m.fechaInicio AS date) AND CAST(:fecha AS date) = CAST(m.fechaFin AS date)
+         AND CAST(m.fechaFin AS time) > :horaInicio)
+        OR
+        (CAST(:fecha AS date) > CAST(m.fechaInicio AS date) AND CAST(:fecha AS date) < CAST(m.fechaFin AS date))
+    )
+    """)
+    List<MantenimientoInstalacion> findMantenimientosQueAfectanHorario(
+        @Param("instalacionId") Integer instalacionId,
+        @Param("fecha") java.sql.Date fecha,
+        @Param("horaInicio") java.sql.Time horaInicio,
+        @Param("horaFin") java.sql.Time horaFin);
 }

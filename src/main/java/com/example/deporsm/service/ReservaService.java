@@ -2,9 +2,7 @@ package com.example.deporsm.service;
 
 import com.example.deporsm.dto.CrearReservaDTO;
 import com.example.deporsm.dto.ReservaListDTO;
-import com.example.deporsm.model.BloqueoTemporal;
 import com.example.deporsm.model.Instalacion;
-import com.example.deporsm.model.Pago;
 import com.example.deporsm.model.Reserva;
 import com.example.deporsm.model.Usuario;
 import com.example.deporsm.repository.BloqueoTemporalRepository;
@@ -12,7 +10,6 @@ import com.example.deporsm.repository.InstalacionRepository;
 import com.example.deporsm.repository.PagoRepository;
 import com.example.deporsm.repository.ReservaRepository;
 import com.example.deporsm.repository.UsuarioRepository;
-import com.example.deporsm.service.NotificacionService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +46,9 @@ public class ReservaService {
 
     @Autowired
     private NotificacionService notificacionService;
+
+    @Autowired
+    private BloqueoTemporalService bloqueoTemporalService;
 
     /**
      * Crea una nueva reserva para un usuario
@@ -383,32 +383,9 @@ public class ReservaService {
      */
     private boolean verificarDisponibilidadHorario(Integer instalacionId, java.sql.Date fecha,
                                                 java.sql.Time horaInicio, java.sql.Time horaFin) {
-        // Verificar si hay reservas existentes que se solapen con el horario solicitado
-        String jpql = "SELECT COUNT(r) FROM Reserva r " +
-                      "WHERE r.instalacion.id = :instalacionId " +
-                      "AND r.fecha = :fecha " +
-                      "AND r.estado != 'cancelada' " +
-                      "AND ((r.horaInicio <= :horaInicio AND r.horaFin > :horaInicio) " +
-                      "OR (r.horaInicio < :horaFin AND r.horaFin >= :horaFin) " +
-                      "OR (r.horaInicio >= :horaInicio AND r.horaFin <= :horaFin))";
-
-        Long countReservas = entityManager.createQuery(jpql, Long.class)
-                .setParameter("instalacionId", instalacionId)
-                .setParameter("fecha", fecha)
-                .setParameter("horaInicio", horaInicio)
-                .setParameter("horaFin", horaFin)
-                .getSingleResult();
-
-        if (countReservas > 0) {
-            return false; // Ya hay reservas para este horario
-        }
-
-        // Verificar si hay bloqueos temporales activos que se solapen con el horario solicitado
-        Timestamp ahora = new Timestamp(System.currentTimeMillis());
-        List<BloqueoTemporal> bloqueos = bloqueoTemporalRepository.findActiveBlocksForTimeSlot(
-                instalacionId, fecha, horaInicio, horaFin, ahora);
-
-        return bloqueos.isEmpty(); // Si no hay bloqueos, el horario está disponible
+        // Usar el servicio de bloqueo temporal que ya verifica reservas, bloqueos temporales y mantenimientos
+        return bloqueoTemporalService.verificarDisponibilidadHorario(
+                instalacionId, fecha, horaInicio, horaFin);
     }
 
     /**

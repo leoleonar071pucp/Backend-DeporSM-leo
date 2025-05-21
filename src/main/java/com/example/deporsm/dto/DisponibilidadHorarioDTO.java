@@ -24,17 +24,29 @@ public class DisponibilidadHorarioDTO {
         private Time horaInicio;
         private Time horaFin;
         private boolean bloqueadoTemporalmente = false;
+        private boolean enMantenimiento = false;
+        private String razonBloqueo = null;
 
         public RangoHorarioDTO(Time horaInicio, Time horaFin) {
             this.horaInicio = horaInicio;
             this.horaFin = horaFin;
             this.bloqueadoTemporalmente = false;
+            this.enMantenimiento = false;
         }
 
         public RangoHorarioDTO(Time horaInicio, Time horaFin, boolean bloqueadoTemporalmente) {
             this.horaInicio = horaInicio;
             this.horaFin = horaFin;
             this.bloqueadoTemporalmente = bloqueadoTemporalmente;
+            this.enMantenimiento = false;
+        }
+
+        public RangoHorarioDTO(Time horaInicio, Time horaFin, boolean bloqueadoTemporalmente, boolean enMantenimiento, String razonBloqueo) {
+            this.horaInicio = horaInicio;
+            this.horaFin = horaFin;
+            this.bloqueadoTemporalmente = bloqueadoTemporalmente;
+            this.enMantenimiento = enMantenimiento;
+            this.razonBloqueo = razonBloqueo;
         }
     }
 }

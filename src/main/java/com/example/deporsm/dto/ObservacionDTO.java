@@ -4,6 +4,7 @@ package com.example.deporsm.dto;
 public class ObservacionDTO {
     private Integer idObservacion;
     private String instalacion;
+    private String titulo;
     private String descripcion;
     private String coordinador;
     private String fecha;
@@ -11,11 +12,12 @@ public class ObservacionDTO {
     private String prioridad;
     private String ubicacion;
     private String fotosUrl;    // Constructor que debe coincidir ORDEN Y TIPO
-    public ObservacionDTO(Integer idObservacion, String instalacion, String descripcion,
+    public ObservacionDTO(Integer idObservacion, String instalacion, String titulo, String descripcion,
                           String coordinador, String fecha, String estado, String prioridad,
                           String ubicacion, String fotosUrl) {
         this.idObservacion = idObservacion;
         this.instalacion = instalacion;
+        this.titulo = titulo;
         this.descripcion = descripcion;
         this.coordinador = coordinador;
         this.fecha = fecha;
@@ -32,6 +34,10 @@ public class ObservacionDTO {
 
     public String getInstalacion() {
         return instalacion;
+    }
+
+    public String getTitulo() {
+        return titulo;
     }
 
     public String getDescripcion() {

@@ -3,9 +3,11 @@ package com.example.deporsm.service;
 import com.example.deporsm.dto.BloqueoTemporalDTO;
 import com.example.deporsm.model.BloqueoTemporal;
 import com.example.deporsm.model.Instalacion;
+import com.example.deporsm.model.MantenimientoInstalacion;
 import com.example.deporsm.model.Usuario;
 import com.example.deporsm.repository.BloqueoTemporalRepository;
 import com.example.deporsm.repository.InstalacionRepository;
+import com.example.deporsm.repository.MantenimientoInstalacionRepository;
 import com.example.deporsm.repository.UsuarioRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -30,6 +32,9 @@ public class BloqueoTemporalService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private MantenimientoInstalacionRepository mantenimientoRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -85,7 +90,7 @@ public class BloqueoTemporalService {
     }
 
     /**
-     * Verifica si un horario está disponible (no reservado y no bloqueado temporalmente)
+     * Verifica si un horario está disponible (no reservado, no bloqueado temporalmente y no afectado por mantenimiento)
      */
     public boolean verificarDisponibilidadHorario(Integer instalacionId, Date fecha,
                                                 Time horaInicio, Time horaFin) {
@@ -121,8 +126,45 @@ public class BloqueoTemporalService {
                 return false; // Hay bloqueos temporales activos
             }
 
-            System.out.println("Horario disponible: No hay reservas ni bloqueos temporales");
-            return true; // Si no hay reservas ni bloqueos, el horario está disponible
+            // Imprimir información detallada de la fecha y hora que se está verificando
+            System.out.println("=== VERIFICANDO DISPONIBILIDAD PARA HORARIO ===");
+            System.out.println("Instalación ID: " + instalacionId);
+            System.out.println("Fecha solicitada: " + fecha + " (Clase: " + fecha.getClass().getName() + ")");
+            System.out.println("Hora inicio: " + horaInicio + " (Clase: " + horaInicio.getClass().getName() + ")");
+            System.out.println("Hora fin: " + horaFin + " (Clase: " + horaFin.getClass().getName() + ")");
+            System.out.println("Fecha como LocalDate: " + fecha.toLocalDate());
+            System.out.println("Hora inicio como LocalTime: " + horaInicio.toLocalTime());
+            System.out.println("Hora fin como LocalTime: " + horaFin.toLocalTime());
+            System.out.println("===========================================");
+
+            // Verificar si hay mantenimientos programados o en progreso que afecten la disponibilidad
+            List<MantenimientoInstalacion> mantenimientos = mantenimientoRepository.findMantenimientosQueAfectanHorario(
+                    instalacionId, fecha, horaInicio, horaFin);
+
+            if (!mantenimientos.isEmpty()) {
+                System.out.println("Horario no disponible: Hay " + mantenimientos.size() +
+                                  " mantenimientos que afectan la disponibilidad");
+
+                // Imprimir información detallada de los mantenimientos
+                System.out.println("=== MANTENIMIENTOS QUE AFECTAN HORARIO ===");
+                System.out.println("Instalación ID: " + instalacionId);
+                System.out.println("Fecha solicitada: " + fecha);
+                System.out.println("Horario solicitado: " + horaInicio + " - " + horaFin);
+
+                for (MantenimientoInstalacion m : mantenimientos) {
+                    System.out.println("Mantenimiento ID: " + m.getId() +
+                                      ", Inicio: " + m.getFechaInicio() +
+                                      ", Fin: " + m.getFechaFin() +
+                                      ", Estado: " + m.getEstado());
+                }
+
+                System.out.println("=========================================");
+
+                return false; // Hay mantenimientos que afectan la disponibilidad
+            }
+
+            System.out.println("Horario disponible: No hay reservas, bloqueos temporales ni mantenimientos");
+            return true; // Si no hay reservas, bloqueos ni mantenimientos, el horario está disponible
         } catch (Exception e) {
             System.err.println("Error al verificar disponibilidad de horario: " + e.getMessage());
             e.printStackTrace();

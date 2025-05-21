@@ -39,6 +39,9 @@ public class Instalacion {
 
     private Boolean activo;
 
+    @Column(name = "requiere_mantenimiento")
+    private Boolean requiereMantenimiento = false;
+
     @Column(name = "created_at")
     private Timestamp createdAt;
 

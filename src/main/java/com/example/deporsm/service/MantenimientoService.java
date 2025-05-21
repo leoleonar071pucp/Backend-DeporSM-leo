@@ -64,6 +64,22 @@ public class MantenimientoService {
         Usuario registrador = usuarioRepository.findById(requestDTO.getRegistradoPorId())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
+        // Imprimir información detallada de las fechas recibidas en el servicio
+        System.out.println("=== INFORMACIÓN DE FECHAS Y HORAS EN EL SERVICIO ===");
+        System.out.println("Fecha inicio recibida: " + requestDTO.getFechaInicio());
+        System.out.println("Fecha fin recibida: " + requestDTO.getFechaFin());
+        System.out.println("Fecha inicio - Año: " + requestDTO.getFechaInicio().getYear() +
+                          ", Mes: " + requestDTO.getFechaInicio().getMonthValue() +
+                          ", Día: " + requestDTO.getFechaInicio().getDayOfMonth() +
+                          ", Hora: " + requestDTO.getFechaInicio().getHour() +
+                          ", Minuto: " + requestDTO.getFechaInicio().getMinute());
+        System.out.println("Fecha fin - Año: " + requestDTO.getFechaFin().getYear() +
+                          ", Mes: " + requestDTO.getFechaFin().getMonthValue() +
+                          ", Día: " + requestDTO.getFechaFin().getDayOfMonth() +
+                          ", Hora: " + requestDTO.getFechaFin().getHour() +
+                          ", Minuto: " + requestDTO.getFechaFin().getMinute());
+        System.out.println("==============================================");
+
         // Crear una nueva instancia de MantenimientoInstalacion
         MantenimientoInstalacion mantenimiento = new MantenimientoInstalacion();
 
@@ -216,32 +232,79 @@ public class MantenimientoService {
      * Busca las reservas que se verán afectadas por un mantenimiento
      */
     private List<Reserva> buscarReservasAfectadas(Integer instalacionId, LocalDateTime fechaInicio, LocalDateTime fechaFin) {
+        // Imprimir información detallada de las fechas recibidas
+        System.out.println("=== INFORMACIÓN DE FECHAS Y HORAS EN BUSCAR RESERVAS AFECTADAS ===");
+        System.out.println("Fecha inicio: " + fechaInicio);
+        System.out.println("Fecha fin: " + fechaFin);
+        System.out.println("Fecha inicio - Año: " + fechaInicio.getYear() +
+                          ", Mes: " + fechaInicio.getMonthValue() +
+                          ", Día: " + fechaInicio.getDayOfMonth() +
+                          ", Hora: " + fechaInicio.getHour() +
+                          ", Minuto: " + fechaInicio.getMinute());
+        System.out.println("Fecha fin - Año: " + fechaFin.getYear() +
+                          ", Mes: " + fechaFin.getMonthValue() +
+                          ", Día: " + fechaFin.getDayOfMonth() +
+                          ", Hora: " + fechaFin.getHour() +
+                          ", Minuto: " + fechaFin.getMinute());
+
         // Convertir LocalDateTime a Date y Time para la consulta
         LocalDate fechaInicioDate = fechaInicio.toLocalDate();
         LocalDate fechaFinDate = fechaFin.toLocalDate();
         LocalTime horaInicioTime = fechaInicio.toLocalTime();
         LocalTime horaFinTime = fechaFin.toLocalTime();
 
+        System.out.println("Fecha inicio convertida: " + fechaInicioDate);
+        System.out.println("Fecha fin convertida: " + fechaFinDate);
+        System.out.println("Hora inicio convertida: " + horaInicioTime);
+        System.out.println("Hora fin convertida: " + horaFinTime);
+        System.out.println("==============================================");
+
         // Consulta JPQL para encontrar reservas que se solapan con el período de mantenimiento
         String jpql = "SELECT r FROM Reserva r " +
                 "WHERE r.instalacion.id = :instalacionId " +
                 "AND r.estado != 'cancelada' " +
                 "AND (" +
-                // Caso 1: La fecha de la reserva está entre la fecha de inicio y fin del mantenimiento
-                "(r.fecha >= :fechaInicio AND r.fecha <= :fechaFin) " +
-                // Caso 2: La fecha de la reserva es igual a la fecha de inicio del mantenimiento y la hora de fin de la reserva es después de la hora de inicio del mantenimiento
-                "OR (r.fecha = :fechaInicio AND r.horaFin > :horaInicio) " +
-                // Caso 3: La fecha de la reserva es igual a la fecha de fin del mantenimiento y la hora de inicio de la reserva es antes de la hora de fin del mantenimiento
-                "OR (r.fecha = :fechaFin AND r.horaInicio < :horaFin) " +
+                // Caso 1: Reserva en el mismo día que el mantenimiento (inicio y fin)
+                "(r.fecha = :fechaInicio AND r.fecha = :fechaFin " +
+                "AND (" +
+                "  (r.horaInicio <= :horaInicio AND r.horaFin > :horaInicio) OR " +
+                "  (r.horaInicio < :horaFin AND r.horaFin >= :horaFin) OR " +
+                "  (r.horaInicio >= :horaInicio AND r.horaFin <= :horaFin)" +
+                ")) " +
+                // Caso 2: Reserva en el día de inicio del mantenimiento y mantenimiento dura más de un día
+                "OR (r.fecha = :fechaInicio AND :fechaInicio < :fechaFin " +
+                "AND r.horaFin > :horaInicio) " +
+                // Caso 3: Reserva en el día de fin del mantenimiento y mantenimiento comenzó en día anterior
+                "OR (r.fecha = :fechaFin AND :fechaInicio < :fechaFin " +
+                "AND r.horaInicio < :horaFin) " +
+                // Caso 4: Reserva en un día entre el inicio y fin del mantenimiento
+                "OR (r.fecha > :fechaInicio AND r.fecha < :fechaFin) " +
                 ")";
 
-        return entityManager.createQuery(jpql, Reserva.class)
+        List<Reserva> reservasAfectadas = entityManager.createQuery(jpql, Reserva.class)
                 .setParameter("instalacionId", instalacionId)
                 .setParameter("fechaInicio", Date.valueOf(fechaInicioDate))
                 .setParameter("fechaFin", Date.valueOf(fechaFinDate))
                 .setParameter("horaInicio", Time.valueOf(horaInicioTime))
                 .setParameter("horaFin", Time.valueOf(horaFinTime))
                 .getResultList();
+
+        // Imprimir información de depuración
+        System.out.println("=== RESERVAS AFECTADAS POR MANTENIMIENTO ===");
+        System.out.println("Instalación ID: " + instalacionId);
+        System.out.println("Fecha inicio mantenimiento: " + fechaInicioDate + " " + horaInicioTime);
+        System.out.println("Fecha fin mantenimiento: " + fechaFinDate + " " + horaFinTime);
+        System.out.println("Total reservas afectadas: " + reservasAfectadas.size());
+
+        for (Reserva r : reservasAfectadas) {
+            System.out.println("Reserva ID: " + r.getId() +
+                              ", Fecha: " + r.getFecha() +
+                              ", Hora: " + r.getHoraInicio() + " - " + r.getHoraFin());
+        }
+
+        System.out.println("==========================================");
+
+        return reservasAfectadas;
     }
 
     /**
