@@ -2,6 +2,7 @@
 package com.example.deporsm.controller;
 
 import com.example.deporsm.dto.ObservacionDTO;
+import com.example.deporsm.dto.ObservacionInstalacionDTO;
 import com.example.deporsm.dto.ObservacionRecienteDTO;
 import com.example.deporsm.dto.ObservacionRequestDTO;
 import com.example.deporsm.model.Instalacion;
@@ -17,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.Timestamp;
 import java.util.HashMap;
@@ -66,6 +66,22 @@ import java.util.Optional;
         return observacionRepository.findObservacionesDTOByCoordinadorId(coordinadorId);
     }
 
+    /**
+     * Obtiene las observaciones recientes para una instalación específica
+     * @param instalacionId ID de la instalación
+     * @return Lista de observaciones recientes para la instalación
+     */
+    @GetMapping("/instalacion/{instalacionId}")
+    public ResponseEntity<?> obtenerObservacionesPorInstalacion(@PathVariable Integer instalacionId) {
+        try {
+            List<ObservacionInstalacionDTO> observaciones = observacionRepository.findObservacionesRecientesPorInstalacion(instalacionId);
+            return ResponseEntity.ok(observaciones);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Error al obtener observaciones: " + e.getMessage()));
+        }
+    }
+
     @PostMapping
     public ResponseEntity<?> crearObservacion(
             @RequestBody ObservacionRequestDTO requestDTO) {
@@ -103,8 +119,8 @@ import java.util.Optional;
 
             // Guardar coordenadas si están disponibles
             if (requestDTO.getUbicacionLat() != null && requestDTO.getUbicacionLng() != null) {
-                String ubicacion = requestDTO.getUbicacionLat() + "," + requestDTO.getUbicacionLng();
-                // Aquí podrías guardar las coordenadas en un nuevo campo de la entidad si lo agregas
+                // Aquí se podría guardar las coordenadas en un nuevo campo de la entidad si se agrega
+                // String ubicacion = requestDTO.getUbicacionLat() + "," + requestDTO.getUbicacionLng();
             }
 
             // Timestamps automáticos
@@ -151,6 +167,15 @@ import java.util.Optional;
 
             if (!mantenimientosActivos.isEmpty()) {
                 response.put("mensaje", "La instalación ya tiene un mantenimiento programado o en progreso");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+
+            // Verificar si ya existe una observación en proceso para esta instalación
+            List<Observacion> observacionesEnProceso = observacionRepository.findByInstalacionIdAndEstado(
+                instalacion.getId(), "en_proceso");
+
+            if (!observacionesEnProceso.isEmpty()) {
+                response.put("mensaje", "Ya existe una observación en proceso para esta instalación. No se puede aprobar otra observación hasta que la actual sea resuelta.");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
 

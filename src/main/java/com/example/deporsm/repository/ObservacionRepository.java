@@ -1,6 +1,7 @@
 // src/main/java/com/example/deporsm/repository/ObservacionRepository.java
 package com.example.deporsm.repository;
 
+import com.example.deporsm.dto.ObservacionInstalacionDTO;
 import com.example.deporsm.dto.ObservacionRecienteDTO;
 import com.example.deporsm.model.Observacion;
 import com.example.deporsm.dto.ObservacionDTO;
@@ -132,4 +133,28 @@ List<Object[]> findObservacionesByCoordinadorId(Integer usuarioId);
      * @return Lista de observaciones que cumplen con los criterios
      */
     List<Observacion> findByInstalacionIdAndEstado(Integer instalacionId, String estado);
+
+    /**
+     * Obtiene las observaciones recientes para una instalación específica
+     * @param instalacionId ID de la instalación
+     * @return Lista de observaciones recientes para la instalación
+     */
+    @Query(value = """
+        SELECT
+            o.id AS idObservacion,
+            i.nombre AS nombreInstalacion,
+            o.titulo AS titulo,
+            o.descripcion,
+            o.prioridad,
+            DATE_FORMAT(o.created_at, '%Y-%m-%d') AS fecha,
+            o.estado AS estado,
+            CONCAT(u.nombre, ' ', u.apellidos) AS coordinador
+        FROM observaciones o
+        JOIN instalaciones i ON o.instalacion_id = i.id
+        JOIN usuarios u ON o.usuario_id = u.id
+        WHERE o.instalacion_id = :instalacionId
+        ORDER BY o.created_at DESC
+        LIMIT 5
+    """, nativeQuery = true)
+    List<ObservacionInstalacionDTO> findObservacionesRecientesPorInstalacion(@org.springframework.data.repository.query.Param("instalacionId") Integer instalacionId);
 }

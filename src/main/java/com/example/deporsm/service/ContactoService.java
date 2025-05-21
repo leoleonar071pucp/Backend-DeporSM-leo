@@ -83,7 +83,8 @@ public class ContactoService {
      * @return Contenido HTML del correo
      */
     private String generarContenidoCorreoAdministrador(ContactoDTO contactoDTO) {
-        LocalDateTime ahora = LocalDateTime.now();
+        // Usar la zona horaria de Perú (GMT-5)
+        LocalDateTime ahora = LocalDateTime.now(java.time.ZoneId.of("America/Lima"));
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
         return "<html><body>" +
