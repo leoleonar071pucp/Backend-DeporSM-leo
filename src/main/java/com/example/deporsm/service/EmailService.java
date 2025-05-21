@@ -1,6 +1,9 @@
 package com.example.deporsm.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
+import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -13,15 +16,16 @@ import jakarta.mail.internet.MimeMessage;
  * Servicio para enviar correos electrónicos
  */
 @Service
+@Profile("!dev") // Esta implementación se usa en todos los perfiles excepto dev
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    protected final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
+    @Value("${spring.mail.username:deporsm.notificaciones@gmail.com}")
+    protected String fromEmail;
 
     @Value("${spring.mail.sender-name:DeporSM - Municipalidad de San Miguel}")
-    private String senderName;
+    protected String senderName;
 
     public EmailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
@@ -59,10 +63,8 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            String fromAddress = String.format("%s <%s>", senderName, fromEmail);
-            System.out.println("[INFO] Dirección de remitente: " + fromAddress);
-
-            helper.setFrom(fromAddress);
+            // Usar solo el correo como remitente para evitar problemas de formato
+            helper.setFrom(fromEmail);
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
@@ -70,6 +72,16 @@ public class EmailService {
             System.out.println("[INFO] Enviando correo...");
             mailSender.send(message);
             System.out.println("[INFO] Correo enviado exitosamente a: " + to);
+        } catch (MailAuthenticationException e) {
+            System.out.println("[ERROR] Error de autenticación al enviar correo: " + e.getMessage());
+            System.out.println("[ERROR] Verifica las credenciales de correo en application.properties");
+            e.printStackTrace();
+            throw new MessagingException("Error de autenticación al enviar correo. Verifica las credenciales.", e);
+        } catch (MailSendException e) {
+            System.out.println("[ERROR] Error al enviar correo: " + e.getMessage());
+            System.out.println("[ERROR] Causa: " + (e.getCause() != null ? e.getCause().getMessage() : "Desconocida"));
+            e.printStackTrace();
+            throw new MessagingException("Error al enviar correo: " + e.getMessage(), e);
         } catch (MessagingException e) {
             System.out.println("[ERROR] Error al enviar correo HTML: " + e.getMessage());
             System.out.println("[ERROR] Causa: " + (e.getCause() != null ? e.getCause().getMessage() : "Desconocida"));

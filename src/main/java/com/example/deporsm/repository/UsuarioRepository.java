@@ -18,6 +18,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
     // Método para encontrar un usuario por su correo
     Optional<Usuario> findByEmail(String correo);
 
+    // Método para encontrar un usuario por su DNI
+    Optional<Usuario> findByDni(String dni);
+
     // Count active users by role
     @Query("SELECT COUNT(u) FROM Usuario u WHERE u.activo = true")
     int countActiveUsers();
@@ -31,7 +34,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 
     // Query para encontrar coordinadores con sus instalaciones asignadas
     @Query(value = """
-    SELECT 
+    SELECT
         u.id,
         CONCAT(u.nombre, ' ', u.apellidos) as nombre,
         u.email,
@@ -39,56 +42,56 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
         GROUP_CONCAT(i.nombre ORDER BY i.nombre SEPARATOR ', ') as instalacionesAsignadas,
         u.activo as activo,
         DATE_FORMAT(u.last_login, '%Y-%m-%d %H:%i:%s') as ultimoAcceso
-    FROM 
+    FROM
         deportes_sm.usuarios u
-    LEFT JOIN 
+    LEFT JOIN
         deportes_sm.coordinadores_instalaciones ci ON u.id = ci.usuario_id
-    LEFT JOIN 
+    LEFT JOIN
         deportes_sm.instalaciones i ON ci.instalacion_id = i.id
-    WHERE 
+    WHERE
         u.role_id = 3  -- Solo coordinadores
-    GROUP BY 
+    GROUP BY
         u.id, u.nombre, u.apellidos, u.email, u.telefono, u.activo, u.last_login, u.created_at
     """, nativeQuery = true)
     List<CoordinadorDTO> findAllCoordinadores();
 
-    // Query para obtener administradores    
+    // Query para obtener administradores
     @Query(value = """
-        SELECT 
+        SELECT
             u.id,
             CONCAT(u.nombre, ' ', u.apellidos) AS nombre,
             u.email,
             u.telefono,
             '' as instalacionesAsignadas,
-            u.activo as activo 
-        FROM 
+            u.activo as activo
+        FROM
             deportes_sm.usuarios u
-        WHERE 
+        WHERE
             u.role_id = 2
-        GROUP BY 
+        GROUP BY
             u.id, u.nombre, u.apellidos, u.email, u.telefono, u.activo
-        ORDER BY 
+        ORDER BY
             u.nombre, u.apellidos
         """, nativeQuery = true)
-    List<AdministradorDTO> findAllAdministradores();    
+    List<AdministradorDTO> findAllAdministradores();
 
-    // Get monthly growth percentage for all users    
+    // Get monthly growth percentage for all users
     @Query(value = """
-    SELECT 
-        CASE 
-            WHEN prev_count = 0 THEN 
-                CASE 
-                    WHEN curr_count > 0 THEN 100 
+    SELECT
+        CASE
+            WHEN prev_count = 0 THEN
+                CASE
+                    WHEN curr_count > 0 THEN 100
                     ELSE 0  -- Si no había antes y no hay ahora, es 0%
                 END
             ELSE ROUND(((curr_count - prev_count) * 100.0 / prev_count), 0)
         END
     FROM (
-        SELECT            (SELECT COUNT(*) 
-             FROM usuarios u 
+        SELECT            (SELECT COUNT(*)
+             FROM usuarios u
              WHERE u.created_at <= NOW()) as curr_count,
-            (SELECT COUNT(*) 
-             FROM usuarios u 
+            (SELECT COUNT(*)
+             FROM usuarios u
              WHERE u.created_at <= DATE_SUB(NOW(), INTERVAL 30 DAY)) as prev_count
     ) counts
     """, nativeQuery = true)
@@ -96,38 +99,38 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 
     // Get monthly growth percentage by role
     @Query(value = """
-    SELECT 
-        CASE 
-            WHEN prev_count = 0 THEN 
-                CASE 
-                    WHEN curr_count > 0 THEN 100 
+    SELECT
+        CASE
+            WHEN prev_count = 0 THEN
+                CASE
+                    WHEN curr_count > 0 THEN 100
                     ELSE 0  -- Si no había antes y no hay ahora, es 0%
                 END
             ELSE ROUND(((curr_count - prev_count) * 100.0 / prev_count), 0)
         END
     FROM (
-        SELECT            (SELECT COUNT(*) 
-             FROM usuarios u 
-             WHERE CASE 
+        SELECT            (SELECT COUNT(*)
+             FROM usuarios u
+             WHERE CASE
                    WHEN :roleId = 4 THEN true -- Para vecinos, no filtramos por activo
                    ELSE u.activo = true -- Para otros roles, sí filtramos por activo
                    END
-             AND u.role_id = :roleId 
+             AND u.role_id = :roleId
              AND u.created_at <= NOW()) as curr_count,
-            (SELECT COUNT(*) 
-             FROM usuarios u 
-             WHERE CASE 
+            (SELECT COUNT(*)
+             FROM usuarios u
+             WHERE CASE
                    WHEN :roleId = 4 THEN true -- Para vecinos, no filtramos por activo
                    ELSE u.activo = true -- Para otros roles, sí filtramos por activo
                    END
-             AND u.role_id = :roleId 
+             AND u.role_id = :roleId
              AND u.created_at <= DATE_SUB(NOW(), INTERVAL 30 DAY)) as prev_count
     ) counts
     """, nativeQuery = true)
     int getMonthlyGrowthPercentageByRole(Integer roleId);
 
     @Query(value = """
-    SELECT 
+    SELECT
         u.id as id,
         CONCAT(u.nombre, ' ', u.apellidos) as nombre,
         u.email as email,
@@ -137,13 +140,13 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
         u.activo as activo,
         DATE_FORMAT(u.last_login, '%Y-%m-%d %H:%i:%s') as lastLogin,
         COUNT(r.id) as reservas
-    FROM 
+    FROM
         deportes_sm.usuarios u
-    LEFT JOIN 
+    LEFT JOIN
         deportes_sm.reservas r ON u.id = r.usuario_id
-    WHERE 
+    WHERE
         u.role_id = 4
-    GROUP BY 
+    GROUP BY
         u.id, u.nombre, u.apellidos, u.email, u.telefono, u.direccion, u.dni, u.activo, u.last_login
     """, nativeQuery = true)
     List<VecinoDTOProjection> findAllVecinos();
