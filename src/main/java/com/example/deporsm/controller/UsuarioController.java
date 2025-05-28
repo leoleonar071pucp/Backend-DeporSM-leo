@@ -539,11 +539,11 @@ public class UsuarioController {
     @PostMapping("/coordinadores")
     public ResponseEntity<?> crearCoordinador(@RequestBody Usuario usuario) {
         try {
-            // Verificar si el usuario actual es superadmin
+            // Verificar si el usuario actual es superadmin o admin
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !authentication.isAuthenticated()
                 || !authentication.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"))) {
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN") || a.getAuthority().equals("ROLE_ADMIN"))) {
                 return ResponseEntity.status(403).body("No tienes permisos para crear coordinadores");
             }
 
@@ -573,11 +573,11 @@ public class UsuarioController {
     @PutMapping("/coordinadores/{id}")
     public ResponseEntity<?> actualizarCoordinador(@PathVariable Integer id, @RequestBody Usuario datosActualizados) {
         try {
-            // Verificar si el usuario actual es superadmin
+            // Verificar si el usuario actual es superadmin o admin
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !authentication.isAuthenticated()
                 || !authentication.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"))) {
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN") || a.getAuthority().equals("ROLE_ADMIN"))) {
                 return ResponseEntity.status(403).body("No tienes permisos para actualizar coordinadores");
             }
 
@@ -610,11 +610,11 @@ public class UsuarioController {
     @GetMapping("/coordinadores/{id}")
     public ResponseEntity<?> obtenerCoordinador(@PathVariable Integer id) {
         try {
-            // Verificar si el usuario actual es superadmin
+            // Verificar si el usuario actual es superadmin o admin
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !authentication.isAuthenticated()
                 || !authentication.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"))) {
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN") || a.getAuthority().equals("ROLE_ADMIN"))) {
                 return ResponseEntity.status(403).body("No tienes permisos para ver los detalles de coordinadores");
             }
 
@@ -634,11 +634,11 @@ public class UsuarioController {
     @PutMapping("/coordinadores/{id}/desactivar")
     public ResponseEntity<?> desactivarCoordinador(@PathVariable Integer id) {
         try {
-            // Verificar si el usuario actual es superadmin
+            // Verificar si el usuario actual es superadmin o admin
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !authentication.isAuthenticated()
                 || !authentication.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"))) {
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN") || a.getAuthority().equals("ROLE_ADMIN"))) {
                 return ResponseEntity.status(403).body("No tienes permisos para desactivar coordinadores");
             }
 
@@ -660,11 +660,11 @@ public class UsuarioController {
     @PutMapping("/coordinadores/{id}/activar")
     public ResponseEntity<?> activarCoordinador(@PathVariable Integer id) {
         try {
-            // Verificar si el usuario actual es superadmin
+            // Verificar si el usuario actual es superadmin o admin
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !authentication.isAuthenticated()
                 || !authentication.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"))) {
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN") || a.getAuthority().equals("ROLE_ADMIN"))) {
                 return ResponseEntity.status(403).body("No tienes permisos para activar coordinadores");
             }
 
@@ -682,5 +682,7 @@ public class UsuarioController {
             return ResponseEntity.badRequest().body("Error al activar coordinador: " + e.getMessage());
         }
     }
+
+
 }
 
