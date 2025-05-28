@@ -74,7 +74,8 @@ public class ReservaController {
         }
 
         try {
-            List<ReservaListDTO> reservas = reservaRepository.listarReservasParaAdmin();
+            List<Object[]> resultados = reservaRepository.listarReservasParaAdminNative();
+            List<ReservaListDTO> reservas = convertirResultadosADTO(resultados);
             return ResponseEntity.ok(reservas);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error al obtener reservas: " + e.getMessage());
@@ -106,7 +107,8 @@ public class ReservaController {
                 }
             }
 
-            List<ReservaListDTO> reservas = reservaRepository.filtrarReservas(texto, fechaSql);
+            List<Object[]> resultados = reservaRepository.filtrarReservasNative(texto, fechaSql);
+            List<ReservaListDTO> reservas = convertirResultadosADTO(resultados);
             return ResponseEntity.ok(reservas);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error al filtrar reservas: " + e.getMessage());
@@ -251,5 +253,26 @@ public class ReservaController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error al obtener reservas: " + e.getMessage());
         }
+    }
+
+    /**
+     * Convierte los resultados de consultas nativas a DTOs
+     */
+    private List<ReservaListDTO> convertirResultadosADTO(List<Object[]> resultados) {
+        return resultados.stream().map(row -> {
+            ReservaListDTO dto = new ReservaListDTO();
+            dto.setId((Integer) row[0]);
+            dto.setUsuarioNombre((String) row[1]);
+            dto.setInstalacionNombre((String) row[2]);
+            dto.setInstalacionUbicacion((String) row[3]);
+            dto.setMetodoPago((String) row[4]);
+            dto.setInstalacionImagenUrl((String) row[5]);
+            dto.setFecha((java.util.Date) row[6]);
+            dto.setHoraInicio((java.sql.Time) row[7]);
+            dto.setHoraFin((java.sql.Time) row[8]);
+            dto.setEstado((String) row[9]);
+            dto.setEstadoPago((String) row[10]);
+            return dto;
+        }).collect(Collectors.toList());
     }
 }

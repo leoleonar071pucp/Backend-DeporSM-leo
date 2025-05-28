@@ -45,22 +45,22 @@ public class PasswordResetService {
     @Transactional
     public boolean solicitarRestablecimientoPassword(String email) throws MessagingException {
         System.out.println("[INFO] Solicitando restablecimiento de contraseña para: " + email);
-        
+
         // Buscar usuario por email
         return usuarioRepository.findByEmail(email)
                 .map(usuario -> {
                     try {
                         // Invalidar tokens anteriores
                         tokenRepository.invalidateAllTokensByUsuarioId(usuario.getId());
-                        
+
                         // Generar nuevo token
                         String token = UUID.randomUUID().toString();
                         PasswordResetToken resetToken = new PasswordResetToken(usuario, token);
                         tokenRepository.save(resetToken);
-                        
+
                         // Enviar correo con el token
                         enviarCorreoRestablecimiento(usuario, token);
-                        
+
                         System.out.println("[INFO] Token de restablecimiento creado y correo enviado para: " + email);
                         return true;
                     } catch (MessagingException e) {
@@ -82,7 +82,7 @@ public class PasswordResetService {
      */
     public boolean validarToken(String token) {
         System.out.println("[INFO] Validando token de restablecimiento: " + token);
-        
+
         return tokenRepository.findByToken(token)
                 .map(resetToken -> {
                     boolean valido = resetToken.isValido();
@@ -105,20 +105,20 @@ public class PasswordResetService {
     @Transactional
     public boolean restablecerPassword(String token, String nuevaPassword) {
         System.out.println("[INFO] Restableciendo contraseña con token: " + token);
-        
+
         return tokenRepository.findByToken(token)
                 .filter(PasswordResetToken::isValido)
                 .map(resetToken -> {
                     Usuario usuario = resetToken.getUsuario();
-                    
+
                     // Actualizar contraseña
                     usuario.setPassword(passwordEncoder.encode(nuevaPassword));
                     usuarioRepository.save(usuario);
-                    
+
                     // Marcar token como usado
                     resetToken.setUsado(true);
                     tokenRepository.save(resetToken);
-                    
+
                     System.out.println("[INFO] Contraseña restablecida para usuario: " + usuario.getEmail());
                     return true;
                 })
@@ -139,7 +139,7 @@ public class PasswordResetService {
         String resetUrl = frontendUrl + "/resetear-contrasena?token=" + token;
         String asunto = "Restablecimiento de contraseña - DeporSM";
         String contenido = generarContenidoCorreoRestablecimiento(usuario, resetUrl);
-        
+
         emailService.sendHtmlEmail(usuario.getEmail(), asunto, contenido);
     }
 
@@ -151,15 +151,21 @@ public class PasswordResetService {
      * @return Contenido HTML del correo
      */
     private String generarContenidoCorreoRestablecimiento(Usuario usuario, String resetUrl) {
-        LocalDateTime expiracion = LocalDateTime.now().plusHours(24);
+        // Usar la zona horaria de Perú (GMT-5)
+        LocalDateTime expiracion = LocalDateTime.now(java.time.ZoneId.of("America/Lima")).plusHours(24);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-        
+
+        // Extraer primer nombre y primer apellido
+        String primerNombre = extraerPrimerNombre(usuario.getNombre());
+        String primerApellido = extraerPrimerApellido(usuario.getApellidos());
+        String nombreCompleto = primerNombre + " " + primerApellido;
+
         return "<html><body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>" +
                 "<div style='max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 5px;'>" +
                 "<div style='text-align: center; margin-bottom: 20px;'>" +
                 "<h2 style='color: #0066cc;'>Restablecimiento de Contraseña</h2>" +
                 "</div>" +
-                "<p>Hola <strong>" + usuario.getNombre() + "</strong>,</p>" +
+                "<p>Hola <strong>" + nombreCompleto + "</strong>,</p>" +
                 "<p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en DeporSM.</p>" +
                 "<p>Para continuar con el proceso, haz clic en el siguiente botón:</p>" +
                 "<div style='text-align: center; margin: 30px 0;'>" +
@@ -189,5 +195,31 @@ public class PasswordResetService {
         } catch (Exception e) {
             System.err.println("[ERROR] Error al limpiar tokens expirados: " + e.getMessage());
         }
+    }
+
+    /**
+     * Extrae el primer nombre de una cadena de nombres
+     * @param nombres Cadena con uno o más nombres separados por espacios
+     * @return El primer nombre
+     */
+    private String extraerPrimerNombre(String nombres) {
+        if (nombres == null || nombres.trim().isEmpty()) {
+            return "";
+        }
+        String[] partesNombre = nombres.trim().split("\\s+");
+        return partesNombre[0];
+    }
+
+    /**
+     * Extrae el primer apellido de una cadena de apellidos
+     * @param apellidos Cadena con uno o más apellidos separados por espacios
+     * @return El primer apellido
+     */
+    private String extraerPrimerApellido(String apellidos) {
+        if (apellidos == null || apellidos.trim().isEmpty()) {
+            return "";
+        }
+        String[] partesApellido = apellidos.trim().split("\\s+");
+        return partesApellido[0];
     }
 }

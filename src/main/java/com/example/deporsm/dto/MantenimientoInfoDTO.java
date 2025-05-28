@@ -32,7 +32,7 @@ public class MantenimientoInfoDTO {
 
     public void setUltimoMantenimiento(LocalDateTime fechaFin) {
         if (fechaFin != null) {
-            this.ultimoMantenimiento = fechaFin.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            this.ultimoMantenimiento = fechaFin.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
             this.tieneMantenimientoCompletado = true;
         } else {
             this.ultimoMantenimiento = null;
@@ -51,7 +51,7 @@ public class MantenimientoInfoDTO {
 
     public void setProximoMantenimiento(LocalDateTime fechaInicio) {
         if (fechaInicio != null) {
-            this.proximoMantenimiento = fechaInicio.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            this.proximoMantenimiento = fechaInicio.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
             this.tieneMantenimientoProgramado = true;
         } else {
             this.proximoMantenimiento = null;

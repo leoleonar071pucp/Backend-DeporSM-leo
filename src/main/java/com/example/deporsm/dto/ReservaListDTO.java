@@ -17,7 +17,7 @@ public class ReservaListDTO {    private Integer id;
     private String estado;
     private String estadoPago;    // Constructor con parámetros para usarlo en la consulta
     public ReservaListDTO(Integer id, String usuarioNombre, String instalacionNombre, String instalacionUbicacion,
-                          String metodoPago, String instalacionImagenUrl, Date fecha, Time horaInicio, Time horaFin, 
+                          String metodoPago, String instalacionImagenUrl, Date fecha, Time horaInicio, Time horaFin,
                           String estado, String estadoPago) {
         this.id = id;
         this.usuarioNombre = usuarioNombre;
@@ -30,6 +30,10 @@ public class ReservaListDTO {    private Integer id;
         this.horaFin = horaFin;
         this.estado = estado;
         this.estadoPago = estadoPago;
+    }
+
+    // Constructor sin parámetros
+    public ReservaListDTO() {
     }
 
     // Getters y Setters
@@ -108,7 +112,7 @@ public class ReservaListDTO {    private Integer id;
     public void setMetodoPago(String metodoPago) {
         this.metodoPago = metodoPago;
     }
-    
+
     public String getInstalacionImagenUrl() {
         return instalacionImagenUrl;
     }

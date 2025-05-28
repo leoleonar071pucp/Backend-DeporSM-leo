@@ -95,4 +95,29 @@ public class PagoService {
     public Optional<Pago> obtenerPagoPorReserva(Integer reservaId) {
         return pagoRepository.findByReservaId(reservaId);
     }
+
+    @Transactional
+    public String procesarPagoDepositoSupabase(Integer reservaId, BigDecimal monto, String urlComprobante) {
+        try {
+            Reserva reserva = reservaRepository.findById(reservaId)
+                    .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+
+            // Crear el registro de pago con la URL de Supabase
+            Pago pago = new Pago();
+            pago.setReservaId(reservaId);
+            pago.setMonto(monto);
+            pago.setMetodo("deposito");
+            pago.setEstado(reserva.getEstadoPago()); // Usar el estado de pago de la reserva
+            pago.setUrlComprobante(urlComprobante); // URL de Supabase
+
+            System.out.println("URL de comprobante de Supabase configurada: " + urlComprobante);
+
+            Pago pagoGuardado = pagoRepository.save(pago);
+            System.out.println("Pago registrado con ID: " + pagoGuardado.getId() + " para reserva ID: " + reservaId);
+
+            return urlComprobante;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al procesar el comprobante de pago de Supabase", e);
+        }
+    }
 }

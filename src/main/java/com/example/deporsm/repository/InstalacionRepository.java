@@ -44,6 +44,7 @@ public interface InstalacionRepository extends JpaRepository<Instalacion, Intege
                 FROM mantenimiento_instalaciones m
                 WHERE m.instalacion_id = i.id
                   AND CURRENT_TIMESTAMP BETWEEN m.fecha_inicio AND m.fecha_fin
+                  AND m.estado NOT IN ('completado', 'cancelado')
             ) THEN 'mantenimiento'
             ELSE 'disponible'
         END AS estado,

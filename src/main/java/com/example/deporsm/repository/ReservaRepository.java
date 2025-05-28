@@ -4,7 +4,6 @@ import com.example.deporsm.dto.DashboardStatsDTO;
 import com.example.deporsm.dto.ReservaDetalleDTO;
 import com.example.deporsm.dto.ReservaRecienteDTO;
 import com.example.deporsm.model.Reserva;
-import com.example.deporsm.dto.ReservaListDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,48 +14,62 @@ import java.util.Map;
 import java.util.Optional;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    // Método para listar reservas para el Admin
-    @Query("SELECT new com.example.deporsm.dto.ReservaListDTO(" +
-            "r.id, " +
-            "u.nombre, " +
-            "i.nombre, " +
-            "i.ubicacion, " +
-            "r.metodoPago, " +
-            "i.imagenUrl, " +
-            "r.fecha, " +
-            "r.horaInicio, " +
-            "r.horaFin, " +
-            "r.estado, " +
-            "r.estadoPago" +
-            ") " +
-            "FROM Reserva r " +
-            "JOIN r.usuario u " +
-            "JOIN r.instalacion i " +
-            "ORDER BY r.fecha DESC, r.horaInicio DESC")
-    List<ReservaListDTO> listarReservasParaAdmin();
+    @Query(value = """
+    SELECT
+        r.id,
+        CONCAT(
+            SUBSTRING_INDEX(u.nombre, ' ', 1),
+            ' ',
+            SUBSTRING_INDEX(u.apellidos, ' ', 1)
+        ) AS usuarioNombre,
+        i.nombre AS instalacionNombre,
+        i.ubicacion AS instalacionUbicacion,
+        r.metodo_pago AS metodoPago,
+        i.imagen_url AS instalacionImagenUrl,
+        r.fecha,
+        r.hora_inicio AS horaInicio,
+        r.hora_fin AS horaFin,
+        r.estado,
+        r.estado_pago AS estadoPago
+    FROM reservas r
+    JOIN usuarios u ON r.usuario_id = u.id
+    JOIN instalaciones i ON r.instalacion_id = i.id
+    ORDER BY r.fecha DESC, r.hora_inicio DESC
+    """, nativeQuery = true)
+    List<Object[]> listarReservasParaAdminNative();
 
     // Método para filtrar reservas por texto y fecha
-    @Query("SELECT new com.example.deporsm.dto.ReservaListDTO(" +
-            "r.id, " +
-            "u.nombre, " +
-            "i.nombre, " +
-            "i.ubicacion, " +
-            "r.metodoPago, " +
-            "i.imagenUrl, " +
-            "r.fecha, " +
-            "r.horaInicio, " +
-            "r.horaFin, " +
-            "r.estado, " +
-            "r.estadoPago" +
-            ") " +
-            "FROM Reserva r " +
-            "JOIN r.usuario u " +
-            "JOIN r.instalacion i " +
-            "WHERE (:texto IS NULL OR " +
-            "LOWER(u.nombre) LIKE LOWER(CONCAT('%', :texto, '%')) OR " +
-            "LOWER(i.nombre) LIKE LOWER(CONCAT('%', :texto, '%'))) " +
-            "AND (:fecha IS NULL OR r.fecha = :fecha) " +
-            "ORDER BY r.fecha DESC, r.horaInicio DESC")
-    List<ReservaListDTO> filtrarReservas(@Param("texto") String texto, @Param("fecha") java.sql.Date fecha);    // Método para buscar reservas por el DNI del usuario
+    @Query(value = """
+    SELECT
+        r.id,
+        CONCAT(
+            SUBSTRING_INDEX(u.nombre, ' ', 1),
+            ' ',
+            SUBSTRING_INDEX(u.apellidos, ' ', 1)
+        ) AS usuarioNombre,
+        i.nombre AS instalacionNombre,
+        i.ubicacion AS instalacionUbicacion,
+        r.metodo_pago AS metodoPago,
+        i.imagen_url AS instalacionImagenUrl,
+        r.fecha,
+        r.hora_inicio AS horaInicio,
+        r.hora_fin AS horaFin,
+        r.estado,
+        r.estado_pago AS estadoPago
+    FROM reservas r
+    JOIN usuarios u ON r.usuario_id = u.id
+    JOIN instalaciones i ON r.instalacion_id = i.id
+    WHERE (:texto IS NULL OR
+        LOWER(CONCAT(
+            SUBSTRING_INDEX(u.nombre, ' ', 1),
+            ' ',
+            SUBSTRING_INDEX(u.apellidos, ' ', 1)
+        )) LIKE LOWER(CONCAT('%', :texto, '%')) OR
+        LOWER(i.nombre) LIKE LOWER(CONCAT('%', :texto, '%')))
+    AND (:fecha IS NULL OR r.fecha = :fecha)
+    ORDER BY r.fecha DESC, r.hora_inicio DESC
+    """, nativeQuery = true)
+    List<Object[]> filtrarReservasNative(@Param("texto") String texto, @Param("fecha") java.sql.Date fecha);    // Método para buscar reservas por el DNI del usuario
     @Query("SELECT r FROM Reserva r JOIN r.usuario u WHERE u.dni = :dni")
     List<Reserva> findByUsuario_Dni(@Param("dni") String dni);
 
@@ -73,7 +86,11 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     @Query(value = """
     SELECT
         r.id AS idReserva,
-        u.nombre AS nombreUsuario,
+        CONCAT(
+            SUBSTRING_INDEX(u.nombre, ' ', 1),
+            ' ',
+            SUBSTRING_INDEX(u.apellidos, ' ', 1)
+        ) AS nombreUsuario,
         i.nombre AS nombreInstalacion,
         i.id AS instalacionId,
         r.fecha AS fecha,
@@ -120,7 +137,11 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     @Query(value = """
     SELECT
         r.id AS idReserva,
-        u.nombre AS nombreUsuario,
+        CONCAT(
+            SUBSTRING_INDEX(u.nombre, ' ', 1),
+            ' ',
+            SUBSTRING_INDEX(u.apellidos, ' ', 1)
+        ) AS nombreUsuario,
         i.nombre AS nombreInstalacion,
         i.id AS instalacionId,
         DATE_FORMAT(r.fecha, '%Y-%m-%d') AS fecha,
@@ -140,13 +161,14 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
 
     /**
      * Consulta para obtener datos de reservas para reportes
+     * Filtra por fecha de creación (created_at) en lugar de fecha de reserva
      */
     @Query(value = """
     SELECT
         r.id,
         CONCAT(u.nombre, ' ', u.apellidos) as usuario,
         i.nombre as instalacion,
-        DATE_FORMAT(r.fecha, '%d/%m/%Y') as fecha,
+        DATE_FORMAT(r.fecha, '%d/%m/%Y') as fecha_reserva,
         TIME_FORMAT(r.hora_inicio, '%H:%i') as hora_inicio,
         TIME_FORMAT(r.hora_fin, '%H:%i') as hora_fin,
         r.estado,
@@ -155,9 +177,9 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     FROM reservas r
     JOIN usuarios u ON r.usuario_id = u.id
     JOIN instalaciones i ON r.instalacion_id = i.id
-    WHERE r.fecha BETWEEN :fechaInicio AND :fechaFin
+    WHERE DATE(r.created_at) BETWEEN :fechaInicio AND :fechaFin
     AND (:instalacionId IS NULL OR r.instalacion_id = :instalacionId)
-    ORDER BY r.fecha DESC, r.hora_inicio DESC
+    ORDER BY r.created_at DESC, r.hora_inicio DESC
     """, nativeQuery = true)
     List<Object[]> findReservasForReport(
         @Param("fechaInicio") LocalDate fechaInicio,
@@ -166,6 +188,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
 
     /**
      * Consulta para obtener datos de ingresos para reportes
+     * Filtra por fecha de creación (created_at) en lugar de fecha de reserva
      */
     @Query(value = """
     SELECT
@@ -175,16 +198,16 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
         total_ingresos
     FROM (
         SELECT
-            DATE(r.fecha) as fecha_agrupada,
+            DATE(r.created_at) as fecha_agrupada,
             i.nombre as instalacion,
             COUNT(r.id) as total_reservas,
             SUM(TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60) as total_ingresos
         FROM reservas r
         JOIN instalaciones i ON r.instalacion_id = i.id
-        WHERE r.fecha BETWEEN :fechaInicio AND :fechaFin
+        WHERE DATE(r.created_at) BETWEEN :fechaInicio AND :fechaFin
         AND r.estado_pago = 'pagado'
         AND (:instalacionId IS NULL OR r.instalacion_id = :instalacionId)
-        GROUP BY DATE(r.fecha), i.id, i.nombre
+        GROUP BY DATE(r.created_at), i.id, i.nombre
     ) AS subquery
     ORDER BY fecha_agrupada DESC
     """, nativeQuery = true)
@@ -195,6 +218,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
 
     /**
      * Consulta para obtener datos de uso de instalaciones para reportes
+     * Filtra por fecha de creación (created_at) en lugar de fecha de reserva
      */
     @Query(value = """
     SELECT
@@ -220,13 +244,13 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
                 COUNT(*) as total
             FROM reservas r2
             WHERE r2.instalacion_id = i.id
-            AND r2.fecha BETWEEN :fechaInicio AND :fechaFin
+            AND DATE(r2.created_at) BETWEEN :fechaInicio AND :fechaFin
             GROUP BY horario
             ORDER BY total DESC
             LIMIT 1
          ) as subquery) as horario_mas_popular
     FROM instalaciones i
-    LEFT JOIN reservas r ON i.id = r.instalacion_id AND r.fecha BETWEEN :fechaInicio AND :fechaFin
+    LEFT JOIN reservas r ON i.id = r.instalacion_id AND DATE(r.created_at) BETWEEN :fechaInicio AND :fechaFin
     WHERE (:instalacionId IS NULL OR i.id = :instalacionId)
     GROUP BY i.id, i.nombre
     ORDER BY total_reservas DESC

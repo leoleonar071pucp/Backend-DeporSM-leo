@@ -12,6 +12,7 @@ import com.example.deporsm.model.Usuario;
 import com.example.deporsm.repository.UsuarioRepository;
 import com.example.deporsm.repository.VecinoRepository;
 import com.example.deporsm.service.UsuarioService;
+import com.example.deporsm.service.ReniecService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -38,6 +39,9 @@ public class UsuarioController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private ReniecService reniecService;
 
     @GetMapping
     public List<Usuario> listarUsuarios() {
@@ -82,6 +86,46 @@ public class UsuarioController {
         } catch (Exception e) {
             System.out.println("[ERROR] Error al verificar DNI: " + e.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", "Error al verificar DNI"));
+        }
+    }
+
+    /**
+     * Verifica un DNI con la API de RENIEC
+     * @param dni DNI a verificar
+     * @return ResponseEntity con los datos de RENIEC o información del error
+     */
+    @GetMapping("/verify-dni-reniec")
+    public ResponseEntity<?> verifyDniWithReniec(@RequestParam String dni) {
+        System.out.println("[DEBUG] Verificando DNI con RENIEC: " + dni);
+        try {
+            // Primero verificar si el DNI ya está registrado en el sistema
+            boolean exists = usuarioRepository.findByDni(dni).isPresent();
+            if (exists) {
+                System.out.println("[DEBUG] DNI " + dni + " ya está registrado en el sistema");
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Este DNI ya está registrado en el sistema. Si eres tú, por favor intenta iniciar sesión o recuperar tu contraseña."
+                ));
+            }
+
+            // Verificar con RENIEC
+            ReniecService.ReniecResponse response = reniecService.verificarDni(dni);
+
+            if (response.isSuccess()) {
+                System.out.println("[DEBUG] DNI verificado exitosamente con RENIEC: " + response.getNombreCompleto());
+                return ResponseEntity.ok(response.toMap());
+            } else {
+                System.out.println("[DEBUG] Error al verificar DNI con RENIEC: " + response.getErrorMessage());
+                return ResponseEntity.badRequest().body(response.toMap());
+            }
+
+        } catch (Exception e) {
+            System.out.println("[ERROR] Error inesperado al verificar DNI con RENIEC: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "error", "Error interno del servidor al verificar DNI"
+            ));
         }
     }
 

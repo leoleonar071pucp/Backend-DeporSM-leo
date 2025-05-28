@@ -3,21 +3,22 @@ package com.example.deporsm.service;
 import com.example.deporsm.dto.MantenimientoRequestDTO;
 import com.example.deporsm.model.Instalacion;
 import com.example.deporsm.model.MantenimientoInstalacion;
+import com.example.deporsm.model.Observacion;
 import com.example.deporsm.model.Reserva;
 import com.example.deporsm.model.Usuario;
 import com.example.deporsm.repository.InstalacionRepository;
 import com.example.deporsm.repository.MantenimientoInstalacionRepository;
+import com.example.deporsm.repository.ObservacionRepository;
 import com.example.deporsm.repository.ReservaRepository;
 import com.example.deporsm.repository.UsuarioRepository;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Date;
 import java.sql.Time;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -30,21 +31,23 @@ public class MantenimientoService {
     private final InstalacionRepository instalacionRepository;
     private final UsuarioRepository usuarioRepository;
     private final ReservaRepository reservaRepository;
+    private final ObservacionRepository observacionRepository;
     private final NotificacionService notificacionService;
     private final EntityManager entityManager;
 
-    @Autowired
     public MantenimientoService(
             MantenimientoInstalacionRepository mantenimientoRepository,
             InstalacionRepository instalacionRepository,
             UsuarioRepository usuarioRepository,
             ReservaRepository reservaRepository,
+            ObservacionRepository observacionRepository,
             NotificacionService notificacionService,
             EntityManager entityManager) {
         this.mantenimientoRepository = mantenimientoRepository;
         this.instalacionRepository = instalacionRepository;
         this.usuarioRepository = usuarioRepository;
         this.reservaRepository = reservaRepository;
+        this.observacionRepository = observacionRepository;
         this.notificacionService = notificacionService;
         this.entityManager = entityManager;
     }
@@ -395,6 +398,12 @@ public class MantenimientoService {
             mantenimiento.setUpdatedAt(LocalDateTime.now());
             MantenimientoInstalacion actualizado = mantenimientoRepository.save(mantenimiento);
             System.out.println("Estado actualizado y guardado en la base de datos.");
+
+            // Si el mantenimiento se completó automáticamente, actualizar la observación y la instalación
+            if ("completado".equals(nuevoEstado) && !"completado".equals(estadoAnterior)) {
+                completarMantenimientoYActualizarObservacion(actualizado);
+            }
+
             return actualizado;
         }
 
@@ -433,6 +442,57 @@ public class MantenimientoService {
             System.out.println("=== FIN DE ACTUALIZACIÓN AUTOMÁTICA ===\n");
         } catch (Exception e) {
             System.err.println("ERROR AL ACTUALIZAR ESTADOS DE MANTENIMIENTOS: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Completa un mantenimiento y actualiza la observación relacionada y el estado de la instalación
+     * @param mantenimiento El mantenimiento que se completó
+     */
+    @Transactional
+    private void completarMantenimientoYActualizarObservacion(MantenimientoInstalacion mantenimiento) {
+        try {
+            System.out.println("=== COMPLETANDO MANTENIMIENTO Y ACTUALIZANDO OBSERVACIÓN ===");
+            System.out.println("Mantenimiento ID: " + mantenimiento.getId());
+            System.out.println("Instalación ID: " + mantenimiento.getInstalacion().getId());
+
+            // Buscar observaciones en proceso para esta instalación
+            List<Observacion> observacionesEnProceso = observacionRepository.findByInstalacionIdAndEstado(
+                    mantenimiento.getInstalacion().getId(), "en_proceso");
+
+            System.out.println("Observaciones en proceso encontradas: " + observacionesEnProceso.size());
+
+            // Actualizar todas las observaciones en proceso a "resuelta"
+            for (Observacion observacion : observacionesEnProceso) {
+                observacion.setEstado("resuelta");
+                observacion.setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
+                observacionRepository.save(observacion);
+                System.out.println("Observación ID " + observacion.getId() + " marcada como resuelta");
+
+                // Enviar notificación al coordinador
+                try {
+                    notificacionService.crearNotificacion(
+                            observacion.getUsuario().getId(),
+                            "Mantenimiento completado",
+                            "El mantenimiento de " + mantenimiento.getInstalacion().getNombre() + " ha sido completado automáticamente.",
+                            "mantenimiento"
+                    );
+                } catch (Exception e) {
+                    System.err.println("Error al enviar notificación: " + e.getMessage());
+                }
+            }
+
+            // Actualizar el estado de la instalación
+            Instalacion instalacion = mantenimiento.getInstalacion();
+            instalacion.setRequiereMantenimiento(false);
+            instalacionRepository.save(instalacion);
+            System.out.println("Instalación " + instalacion.getId() + " - requiere_mantenimiento actualizado a false");
+
+            System.out.println("=== MANTENIMIENTO COMPLETADO Y OBSERVACIÓN ACTUALIZADA ===");
+
+        } catch (Exception e) {
+            System.err.println("ERROR AL COMPLETAR MANTENIMIENTO Y ACTUALIZAR OBSERVACIÓN: " + e.getMessage());
             e.printStackTrace();
         }
     }
