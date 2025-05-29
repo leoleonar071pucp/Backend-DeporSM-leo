@@ -77,6 +77,7 @@ List<Object[]> findAllObservacionesRaw();    default List<ObservacionDTO> findAl
             i.nombre AS nombreInstalacion,
             o.descripcion,
             o.prioridad,
+            o.estado,
             DATE(CONVERT_TZ(o.created_at, @@session.time_zone, '-05:00')) AS fecha
         FROM observaciones o
         JOIN instalaciones i ON o.instalacion_id = i.id

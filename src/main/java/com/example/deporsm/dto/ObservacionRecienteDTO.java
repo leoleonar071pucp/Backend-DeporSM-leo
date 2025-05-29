@@ -6,5 +6,6 @@ public interface ObservacionRecienteDTO {
     String getNombreInstalacion();
     String getDescripcion();
     String getPrioridad();
+    String getEstado();
     String getFecha();
 }

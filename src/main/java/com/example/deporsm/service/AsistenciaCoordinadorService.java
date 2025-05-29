@@ -78,6 +78,63 @@ public class AsistenciaCoordinadorService {
         return asistencias.stream().map(this::convertirADTO).collect(Collectors.toList());
     }
 
+    // Obtener historial completo con filtros (para admin)
+    public List<AsistenciaCoordinadorDTO> obtenerHistorialConFiltros(
+            String coordinadorNombre, String instalacionNombre, String estadoEntrada,
+            String estadoSalida, Date fechaInicio, Date fechaFin) {
+
+        List<AsistenciaCoordinador> todasAsistencias = asistenciaCoordinadorRepository.findAll();
+
+        return todasAsistencias.stream()
+                .filter(asistencia -> {
+                    // Filtro por nombre del coordinador
+                    if (coordinadorNombre != null && !coordinadorNombre.isEmpty()) {
+                        String nombreCompleto = asistencia.getCoordinador().getNombre() + " " +
+                                               asistencia.getCoordinador().getApellidos();
+                        if (!nombreCompleto.toLowerCase().contains(coordinadorNombre.toLowerCase())) {
+                            return false;
+                        }
+                    }
+
+                    // Filtro por nombre de instalación
+                    if (instalacionNombre != null && !instalacionNombre.isEmpty()) {
+                        if (!asistencia.getInstalacion().getNombre().toLowerCase()
+                                .contains(instalacionNombre.toLowerCase())) {
+                            return false;
+                        }
+                    }
+
+                    // Filtro por estado de entrada
+                    if (estadoEntrada != null && !estadoEntrada.isEmpty()) {
+                        if (asistencia.getEstadoEntrada() == null ||
+                            !asistencia.getEstadoEntrada().name().equalsIgnoreCase(estadoEntrada)) {
+                            return false;
+                        }
+                    }
+
+                    // Filtro por estado de salida
+                    if (estadoSalida != null && !estadoSalida.isEmpty()) {
+                        if (asistencia.getEstadoSalida() == null ||
+                            !asistencia.getEstadoSalida().name().equalsIgnoreCase(estadoSalida)) {
+                            return false;
+                        }
+                    }
+
+                    // Filtro por rango de fechas
+                    if (fechaInicio != null && asistencia.getFecha().before(fechaInicio)) {
+                        return false;
+                    }
+                    if (fechaFin != null && asistencia.getFecha().after(fechaFin)) {
+                        return false;
+                    }
+
+                    return true;
+                })
+                .sorted((a1, a2) -> a2.getFecha().compareTo(a1.getFecha())) // Ordenar por fecha descendente
+                .map(this::convertirADTO)
+                .collect(Collectors.toList());
+    }
+
     // Obtener resumen de asistencias por coordinador
     public AsistenciaCoordinadorResumenDTO obtenerResumenAsistenciasCoordinador(Integer coordinadorId) {
         Usuario coordinador = usuarioRepository.findById(coordinadorId)

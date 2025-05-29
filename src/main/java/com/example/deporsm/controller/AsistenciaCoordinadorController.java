@@ -21,11 +21,27 @@ public class AsistenciaCoordinadorController {
     @Autowired
     private AsistenciaCoordinadorService asistenciaCoordinadorService;
 
-    // Obtener todas las asistencias
+    // Obtener todas las asistencias (para admin)
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'COORDINADOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<AsistenciaCoordinadorDTO>> obtenerTodasAsistencias() {
         List<AsistenciaCoordinadorDTO> asistencias = asistenciaCoordinadorService.obtenerTodasAsistencias();
+        return new ResponseEntity<>(asistencias, HttpStatus.OK);
+    }
+
+    // Obtener todas las asistencias con paginación y filtros (para admin)
+    @GetMapping("/admin/historial")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<AsistenciaCoordinadorDTO>> obtenerHistorialCompleto(
+            @RequestParam(required = false) String coordinadorNombre,
+            @RequestParam(required = false) String instalacionNombre,
+            @RequestParam(required = false) String estadoEntrada,
+            @RequestParam(required = false) String estadoSalida,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date fechaFin) {
+
+        List<AsistenciaCoordinadorDTO> asistencias = asistenciaCoordinadorService.obtenerHistorialConFiltros(
+            coordinadorNombre, instalacionNombre, estadoEntrada, estadoSalida, fechaInicio, fechaFin);
         return new ResponseEntity<>(asistencias, HttpStatus.OK);
     }
 
