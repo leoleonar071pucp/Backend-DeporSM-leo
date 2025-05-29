@@ -160,7 +160,7 @@ public class DashboardController {
         }
     }
 
-    @GetMapping("/dashboard/charts")
+    @GetMapping("/admin/dashboard/charts")
     public Map<String, Object> getDashboardCharts() {
         Map<String, Object> chartsData = new HashMap<>();
 
