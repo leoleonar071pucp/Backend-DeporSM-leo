@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PathVariable;
 import com.example.deporsm.repository.UsuarioRepository;
 import com.example.deporsm.repository.LogActividadRepository;
 import com.example.deporsm.repository.ReservaRepository;
@@ -21,7 +22,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
 @RestController
-@RequestMapping("/api/admin")
+@RequestMapping("/api")
 @CrossOrigin(
   origins = {
     "https://deporsm-apiwith-1035693188565.us-central1.run.app",
@@ -50,7 +51,7 @@ public class DashboardController {
     @PersistenceContext
     private EntityManager entityManager;
 
-    @GetMapping("/dashboard")
+    @GetMapping("/admin/dashboard")
     public Map<String, Object> getDashboardData() {
         Map<String, Object> dashboardData = new HashMap<>();
         Map<String, Integer> monthlyChanges = new HashMap<>();
@@ -560,5 +561,209 @@ public class DashboardController {
         item.put("name", name);
         item.put("value", value);
         return item;
+    }
+
+    /**
+     * Dashboard específico para coordinadores
+     */
+    @GetMapping("/coordinador/dashboard/{coordinadorId}")
+    public Map<String, Object> getCoordinadorDashboardData(@PathVariable Integer coordinadorId) {
+        Map<String, Object> dashboardData = new HashMap<>();
+
+        try {
+            // Verificar que el coordinador existe
+            Optional<Usuario> coordinadorOpt = usuarioRepository.findById(coordinadorId);
+            if (!coordinadorOpt.isPresent()) {
+                dashboardData.put("error", "Coordinador no encontrado");
+                return dashboardData;
+            }
+
+            Usuario coordinador = coordinadorOpt.get();
+            if (coordinador.getRol().getId() != 3) {
+                dashboardData.put("error", "El usuario no es un coordinador");
+                return dashboardData;
+            }
+
+            // Obtener estadísticas básicas del coordinador
+            Map<String, Object> stats = new HashMap<>();
+
+            // Total de instalaciones asignadas
+            String query1 = """
+                SELECT COUNT(DISTINCT ci.instalacion_id)
+                FROM coordinadores_instalaciones ci
+                WHERE ci.usuario_id = :coordinadorId
+            """;
+            Long totalFacilities = (Long) entityManager.createNativeQuery(query1)
+                .setParameter("coordinadorId", coordinadorId)
+                .getSingleResult();
+            stats.put("totalFacilities", totalFacilities != null ? totalFacilities.intValue() : 0);
+
+            // Visitas pendientes (programadas para hoy y futuras)
+            String query2 = """
+                SELECT COUNT(*)
+                FROM horarios_coordinadores hc
+                JOIN coordinadores_instalaciones ci ON hc.coordinador_instalacion_id = ci.id
+                WHERE ci.usuario_id = :coordinadorId
+                AND CASE
+                    WHEN hc.dia_semana = 'LUNES' THEN WEEKDAY(CURDATE()) = 0
+                    WHEN hc.dia_semana = 'MARTES' THEN WEEKDAY(CURDATE()) = 1
+                    WHEN hc.dia_semana = 'MIERCOLES' THEN WEEKDAY(CURDATE()) = 2
+                    WHEN hc.dia_semana = 'JUEVES' THEN WEEKDAY(CURDATE()) = 3
+                    WHEN hc.dia_semana = 'VIERNES' THEN WEEKDAY(CURDATE()) = 4
+                    WHEN hc.dia_semana = 'SABADO' THEN WEEKDAY(CURDATE()) = 5
+                    WHEN hc.dia_semana = 'DOMINGO' THEN WEEKDAY(CURDATE()) = 6
+                    ELSE FALSE
+                END
+            """;
+            Long pendingVisits = (Long) entityManager.createNativeQuery(query2)
+                .setParameter("coordinadorId", coordinadorId)
+                .getSingleResult();
+            stats.put("pendingVisits", pendingVisits != null ? pendingVisits.intValue() : 0);
+
+            // Visitas completadas (asistencias registradas)
+            String query3 = """
+                SELECT COUNT(*)
+                FROM asistencias_coordinadores ac
+                WHERE ac.coordinador_id = :coordinadorId
+                AND ac.estado_entrada IN ('a-tiempo', 'tarde')
+            """;
+            Long completedVisits = (Long) entityManager.createNativeQuery(query3)
+                .setParameter("coordinadorId", coordinadorId)
+                .getSingleResult();
+            stats.put("completedVisits", completedVisits != null ? completedVisits.intValue() : 0);
+
+            // Observaciones pendientes de las instalaciones asignadas al coordinador
+            String query4 = """
+                SELECT COUNT(*)
+                FROM observaciones o
+                JOIN coordinadores_instalaciones ci ON o.instalacion_id = ci.instalacion_id
+                WHERE ci.usuario_id = :coordinadorId
+                AND o.estado = 'pendiente'
+            """;
+            Long pendingObservations = (Long) entityManager.createNativeQuery(query4)
+                .setParameter("coordinadorId", coordinadorId)
+                .getSingleResult();
+            stats.put("pendingObservations", pendingObservations != null ? pendingObservations.intValue() : 0);
+
+            dashboardData.put("stats", stats);
+
+            // Obtener próximas visitas programadas (usando zona horaria de Perú)
+            String queryVisitas = """
+                SELECT
+                    hc.id,
+                    ci.instalacion_id as facilityId,
+                    i.nombre as facilityName,
+                    i.ubicacion as location,
+                    DATE_FORMAT(CONVERT_TZ(NOW(), @@session.time_zone, '-05:00'), '%Y-%m-%d') as date,
+                    TIME_FORMAT(hc.hora_inicio, '%H:%i') as scheduledTime,
+                    TIME_FORMAT(hc.hora_fin, '%H:%i') as scheduledEndTime,
+                    'pendiente' as status
+                FROM horarios_coordinadores hc
+                JOIN coordinadores_instalaciones ci ON hc.coordinador_instalacion_id = ci.id
+                JOIN instalaciones i ON ci.instalacion_id = i.id
+                WHERE ci.usuario_id = :coordinadorId
+                AND CASE
+                    WHEN hc.dia_semana = 'LUNES' THEN WEEKDAY(CONVERT_TZ(NOW(), @@session.time_zone, '-05:00')) = 0
+                    WHEN hc.dia_semana = 'MARTES' THEN WEEKDAY(CONVERT_TZ(NOW(), @@session.time_zone, '-05:00')) = 1
+                    WHEN hc.dia_semana = 'MIERCOLES' THEN WEEKDAY(CONVERT_TZ(NOW(), @@session.time_zone, '-05:00')) = 2
+                    WHEN hc.dia_semana = 'JUEVES' THEN WEEKDAY(CONVERT_TZ(NOW(), @@session.time_zone, '-05:00')) = 3
+                    WHEN hc.dia_semana = 'VIERNES' THEN WEEKDAY(CONVERT_TZ(NOW(), @@session.time_zone, '-05:00')) = 4
+                    WHEN hc.dia_semana = 'SABADO' THEN WEEKDAY(CONVERT_TZ(NOW(), @@session.time_zone, '-05:00')) = 5
+                    WHEN hc.dia_semana = 'DOMINGO' THEN WEEKDAY(CONVERT_TZ(NOW(), @@session.time_zone, '-05:00')) = 6
+                    ELSE FALSE
+                END
+                ORDER BY hc.hora_inicio
+                LIMIT 3
+            """;
+
+            @SuppressWarnings("unchecked")
+            List<Object[]> visitasResults = entityManager.createNativeQuery(queryVisitas)
+                .setParameter("coordinadorId", coordinadorId)
+                .getResultList();
+
+            List<Map<String, Object>> upcomingVisits = new ArrayList<>();
+            for (Object[] row : visitasResults) {
+                Map<String, Object> visit = new HashMap<>();
+                visit.put("id", row[0]);
+                visit.put("facilityId", row[1]);
+                visit.put("facilityName", row[2]);
+                visit.put("location", row[3]);
+                visit.put("date", row[4].toString());
+                visit.put("scheduledTime", row[5].toString());
+                visit.put("scheduledEndTime", row[6].toString());
+                visit.put("status", row[7]);
+                upcomingVisits.add(visit);
+            }
+            dashboardData.put("upcomingVisits", upcomingVisits);
+
+            // Obtener observaciones recientes de las instalaciones asignadas al coordinador
+            String queryObservaciones = """
+                SELECT
+                    o.id,
+                    o.instalacion_id as facilityId,
+                    i.nombre as facilityName,
+                    i.ubicacion as location,
+                    o.descripcion as description,
+                    o.estado as status,
+                    DATE_FORMAT(CONVERT_TZ(o.created_at, @@session.time_zone, '-05:00'), '%Y-%m-%d') as date,
+                    o.prioridad as priority
+                FROM observaciones o
+                JOIN instalaciones i ON o.instalacion_id = i.id
+                JOIN coordinadores_instalaciones ci ON o.instalacion_id = ci.instalacion_id
+                WHERE ci.usuario_id = :coordinadorId
+                ORDER BY o.created_at DESC
+                LIMIT 3
+            """;
+
+            @SuppressWarnings("unchecked")
+            List<Object[]> observacionesResults = entityManager.createNativeQuery(queryObservaciones)
+                .setParameter("coordinadorId", coordinadorId)
+                .getResultList();
+
+            List<Map<String, Object>> recentObservations = new ArrayList<>();
+            for (Object[] row : observacionesResults) {
+                Map<String, Object> observation = new HashMap<>();
+                observation.put("id", row[0]);
+                observation.put("facilityId", row[1]);
+                observation.put("facilityName", row[2]);
+                observation.put("location", row[3]);
+                observation.put("description", row[4]);
+                observation.put("status", row[5]);
+                observation.put("date", row[6]);
+                observation.put("priority", row[7]);
+                recentObservations.add(observation);
+            }
+            dashboardData.put("recentObservations", recentObservations);
+
+            // Obtener estadísticas de asistencia
+            String queryAsistencia = """
+                SELECT
+                    SUM(CASE WHEN estado_entrada = 'a-tiempo' THEN 1 ELSE 0 END) as onTime,
+                    SUM(CASE WHEN estado_entrada = 'tarde' THEN 1 ELSE 0 END) as late,
+                    SUM(CASE WHEN estado_entrada = 'no-asistio' THEN 1 ELSE 0 END) as missed,
+                    COUNT(*) as total
+                FROM asistencias_coordinadores
+                WHERE coordinador_id = :coordinadorId
+            """;
+
+            Object[] asistenciaResult = (Object[]) entityManager.createNativeQuery(queryAsistencia)
+                .setParameter("coordinadorId", coordinadorId)
+                .getSingleResult();
+
+            Map<String, Object> attendanceStats = new HashMap<>();
+            attendanceStats.put("onTime", asistenciaResult[0] != null ? ((Number) asistenciaResult[0]).intValue() : 0);
+            attendanceStats.put("late", asistenciaResult[1] != null ? ((Number) asistenciaResult[1]).intValue() : 0);
+            attendanceStats.put("missed", asistenciaResult[2] != null ? ((Number) asistenciaResult[2]).intValue() : 0);
+            attendanceStats.put("total", asistenciaResult[3] != null ? ((Number) asistenciaResult[3]).intValue() : 0);
+
+            dashboardData.put("attendanceStats", attendanceStats);
+
+        } catch (Exception e) {
+            System.err.println("Error al obtener datos del dashboard del coordinador: " + e.getMessage());
+            e.printStackTrace();
+            dashboardData.put("error", "Error al cargar datos del dashboard: " + e.getMessage());
+        }
+
+        return dashboardData;
     }
 }

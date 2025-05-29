@@ -131,6 +131,8 @@ import java.util.Optional;
             // Guardar en base de datos
             observacion = observacionRepository.save(observacion);
 
+            // La notificación se crea desde el frontend para mantener consistencia con el resto del sistema
+
             response.put("mensaje", "Observación creada con éxito");
             response.put("observacion", observacion);
 

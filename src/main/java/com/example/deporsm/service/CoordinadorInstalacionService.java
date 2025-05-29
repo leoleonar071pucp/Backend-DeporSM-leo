@@ -10,6 +10,7 @@ import com.example.deporsm.repository.CoordinadorInstalacionRepository;
 import com.example.deporsm.repository.HorarioCoordinadorRepository;
 import com.example.deporsm.repository.InstalacionRepository;
 import com.example.deporsm.repository.UsuarioRepository;
+import com.example.deporsm.service.NotificacionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class CoordinadorInstalacionService {
@@ -26,6 +29,9 @@ public class CoordinadorInstalacionService {
 
     @Autowired
     private HorarioCoordinadorRepository horarioCoordinadorRepository;
+
+    @Autowired
+    private NotificacionService notificacionService;
 
     @Autowired
     private UsuarioRepository usuarioRepository;
@@ -47,9 +53,19 @@ public class CoordinadorInstalacionService {
             throw new RuntimeException("El usuario no es un coordinador");
         }
 
-        // Eliminar asignaciones existentes del coordinador
+        // Obtener instalaciones actualmente asignadas al coordinador
         List<CoordinadorInstalacion> asignacionesExistentes =
             coordinadorInstalacionRepository.findByUsuarioId(asignacionDTO.getCoordinadorId());
+
+        // Crear un Set con los IDs de instalaciones existentes para comparación rápida
+        Set<Integer> instalacionesExistentesIds = asignacionesExistentes.stream()
+            .map(asignacion -> asignacion.getInstalacion().getId())
+            .collect(Collectors.toSet());
+
+        // Identificar instalaciones nuevas (que no estaban asignadas antes)
+        Set<Integer> nuevasInstalacionesIds = asignacionDTO.getInstalacionIds().stream()
+            .filter(id -> !instalacionesExistentesIds.contains(id))
+            .collect(Collectors.toSet());
 
         for (CoordinadorInstalacion asignacion : asignacionesExistentes) {
             // Eliminar horarios asociados
@@ -80,6 +96,21 @@ public class CoordinadorInstalacionService {
             nuevaAsignacion.setUpdatedAt(new Timestamp(System.currentTimeMillis()));
 
             CoordinadorInstalacion asignacionGuardada = coordinadorInstalacionRepository.save(nuevaAsignacion);
+
+            // Solo enviar notificación si es una instalación NUEVA (no estaba asignada antes)
+            if (nuevasInstalacionesIds.contains(instalacionId)) {
+                try {
+                    notificacionService.crearNotificacion(
+                        coordinador.getId(),
+                        "Nueva instalación asignada",
+                        "Se te ha asignado la supervisión de " + instalacion.getNombre() + ". Revisa tus horarios y responsabilidades en la sección de instalaciones.",
+                        "asignacion"
+                    );
+                    System.out.println("Notificación enviada para nueva instalación: " + instalacion.getNombre());
+                } catch (Exception e) {
+                    System.err.println("Error al enviar notificación de asignación: " + e.getMessage());
+                }
+            }
 
             // Crear horarios para esta asignación
             for (HorarioCoordinadorRequestDTO horarioDTO : asignacionDTO.getHorarios()) {

@@ -16,7 +16,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/asistencias-coordinadores")
-@CrossOrigin(origins = "*")
 public class AsistenciaCoordinadorController {
 
     @Autowired
@@ -82,19 +81,54 @@ public class AsistenciaCoordinadorController {
         return new ResponseEntity<>(resumen, HttpStatus.OK);
     }
 
+    // Endpoint de prueba para verificar deserialización
+    @PostMapping("/test")
+    @PreAuthorize("hasAnyRole('ADMIN', 'COORDINADOR')")
+    public ResponseEntity<?> testDeserialization(@RequestBody String rawJson) {
+        try {
+            System.out.println("[DEBUG] JSON recibido: " + rawJson);
+            return ResponseEntity.ok("JSON recibido correctamente");
+        } catch (Exception e) {
+            System.err.println("[ERROR] Error en test: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error en test: " + e.getMessage());
+        }
+    }
+
     // Crear nueva asistencia
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<AsistenciaCoordinadorDTO> crearAsistencia(@RequestBody AsistenciaCoordinadorRequestDTO requestDTO) {
-        AsistenciaCoordinadorDTO asistenciaCreada = asistenciaCoordinadorService.crearAsistencia(requestDTO);
-        return new ResponseEntity<>(asistenciaCreada, HttpStatus.CREATED);
+    @PreAuthorize("hasAnyRole('ADMIN', 'COORDINADOR')")
+    public ResponseEntity<?> crearAsistencia(@RequestBody AsistenciaCoordinadorRequestDTO requestDTO) {
+        try {
+            System.out.println("[DEBUG] Datos recibidos en el controlador:");
+            System.out.println("  - coordinadorId: " + requestDTO.getCoordinadorId());
+            System.out.println("  - instalacionId: " + requestDTO.getInstalacionId());
+            System.out.println("  - fecha: " + requestDTO.getFecha());
+            System.out.println("  - horaProgramadaInicio: " + requestDTO.getHoraProgramadaInicio());
+            System.out.println("  - horaProgramadaFin: " + requestDTO.getHoraProgramadaFin());
+            System.out.println("  - horaEntrada: " + requestDTO.getHoraEntrada());
+            System.out.println("  - estadoEntrada: " + requestDTO.getEstadoEntrada());
+            System.out.println("  - estadoSalida: " + requestDTO.getEstadoSalida());
+            System.out.println("  - ubicacion: " + requestDTO.getUbicacion());
+            System.out.println("  - notas: " + requestDTO.getNotas());
+
+            AsistenciaCoordinadorDTO asistenciaCreada = asistenciaCoordinadorService.crearAsistencia(requestDTO);
+            System.out.println("[DEBUG] Asistencia creada exitosamente: " + asistenciaCreada);
+            return new ResponseEntity<>(asistenciaCreada, HttpStatus.CREATED);
+        } catch (Exception e) {
+            System.err.println("[ERROR] Error al crear asistencia: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al crear asistencia: " + e.getMessage());
+        }
     }
 
     // Actualizar asistencia existente
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<AsistenciaCoordinadorDTO> actualizarAsistencia(
-            @PathVariable Integer id, 
+            @PathVariable Integer id,
             @RequestBody AsistenciaCoordinadorRequestDTO requestDTO) {
         AsistenciaCoordinadorDTO asistenciaActualizada = asistenciaCoordinadorService.actualizarAsistencia(id, requestDTO);
         return new ResponseEntity<>(asistenciaActualizada, HttpStatus.OK);
@@ -112,7 +146,7 @@ public class AsistenciaCoordinadorController {
     @PatchMapping("/{id}/entrada")
     @PreAuthorize("hasAnyRole('ADMIN', 'COORDINADOR')")
     public ResponseEntity<AsistenciaCoordinadorDTO> registrarEntrada(
-            @PathVariable Integer id, 
+            @PathVariable Integer id,
             @RequestBody AsistenciaCoordinadorRequestDTO requestDTO) {
         AsistenciaCoordinadorDTO asistenciaActualizada = asistenciaCoordinadorService.registrarEntrada(id, requestDTO);
         return new ResponseEntity<>(asistenciaActualizada, HttpStatus.OK);
@@ -122,7 +156,7 @@ public class AsistenciaCoordinadorController {
     @PatchMapping("/{id}/salida")
     @PreAuthorize("hasAnyRole('ADMIN', 'COORDINADOR')")
     public ResponseEntity<AsistenciaCoordinadorDTO> registrarSalida(
-            @PathVariable Integer id, 
+            @PathVariable Integer id,
             @RequestBody AsistenciaCoordinadorRequestDTO requestDTO) {
         AsistenciaCoordinadorDTO asistenciaActualizada = asistenciaCoordinadorService.registrarSalida(id, requestDTO);
         return new ResponseEntity<>(asistenciaActualizada, HttpStatus.OK);

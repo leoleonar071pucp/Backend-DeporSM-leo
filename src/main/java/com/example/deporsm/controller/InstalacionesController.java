@@ -146,6 +146,9 @@ public class InstalacionesController {
             nuevaInstalacion.setContactoNumero(request.getContactoNumero());
             nuevaInstalacion.setImagenUrl(request.getImagenUrl());
             nuevaInstalacion.setPrecio(request.getPrecio());
+            nuevaInstalacion.setLatitud(request.getLatitud());
+            nuevaInstalacion.setLongitud(request.getLongitud());
+            nuevaInstalacion.setRadioValidacion(request.getRadioValidacion() != null ? request.getRadioValidacion() : 100);
             nuevaInstalacion.setCreatedAt(now);
             nuevaInstalacion.setUpdatedAt(now);
 
@@ -269,6 +272,9 @@ public class InstalacionesController {
                         detalleDTO.setImagenUrl(instalacion.getImagenUrl());
                         detalleDTO.setPrecio(instalacion.getPrecio());
                         detalleDTO.setActivo(instalacion.getActivo());
+                        detalleDTO.setLatitud(instalacion.getLatitud());
+                        detalleDTO.setLongitud(instalacion.getLongitud());
+                        detalleDTO.setRadioValidacion(instalacion.getRadioValidacion());
 
                         // Verificar si está en mantenimiento (implementación simplificada)
                         detalleDTO.setEstado(instalacion.getActivo() ? "disponible" : "no disponible");
@@ -604,6 +610,11 @@ public class InstalacionesController {
                     dto.put("nombre", instalacion.getNombre());
                     dto.put("tipo", instalacion.getTipo());
                     dto.put("ubicacion", instalacion.getUbicacion());
+                    dto.put("latitud", instalacion.getLatitud());
+                    dto.put("longitud", instalacion.getLongitud());
+                    dto.put("radioValidacion", instalacion.getRadioValidacion());
+                    dto.put("imagenUrl", instalacion.getImagenUrl());
+                    dto.put("activo", instalacion.getActivo());
                     return dto;
                 })
                 .collect(Collectors.toList());

@@ -42,7 +42,7 @@ public interface ObservacionRepository extends JpaRepository<Observacion, Intege
             o.titulo AS titulo,
             o.descripcion AS descripcion,
             CONCAT(u.nombre, ' ', u.apellidos) AS coordinador,
-            DATE_FORMAT(o.created_at, '%d/%m/%Y') AS fecha,
+            DATE_FORMAT(CONVERT_TZ(o.created_at, @@session.time_zone, '-05:00'), '%d/%m/%Y') AS fecha,
             o.estado AS estado,
             o.prioridad AS prioridad,
             i.ubicacion AS ubicacion,
@@ -77,7 +77,7 @@ List<Object[]> findAllObservacionesRaw();    default List<ObservacionDTO> findAl
             i.nombre AS nombreInstalacion,
             o.descripcion,
             o.prioridad,
-            DATE(o.created_at) AS fecha
+            DATE(CONVERT_TZ(o.created_at, @@session.time_zone, '-05:00')) AS fecha
         FROM observaciones o
         JOIN instalaciones i ON o.instalacion_id = i.id
         ORDER BY o.created_at DESC
@@ -90,7 +90,7 @@ List<ObservacionRecienteDTO> findObservacionesRecientes();      @Query(value = "
             o.titulo AS titulo,
             o.descripcion AS descripcion,
             CONCAT(u.nombre, ' ', u.apellidos) AS coordinador,
-            DATE_FORMAT(o.created_at, '%d/%m/%Y') AS fecha,
+            DATE_FORMAT(CONVERT_TZ(o.created_at, @@session.time_zone, '-05:00'), '%d/%m/%Y') AS fecha,
             o.estado AS estado,
             o.prioridad AS prioridad,
             i.ubicacion AS ubicacion,
@@ -146,9 +146,10 @@ List<Object[]> findObservacionesByCoordinadorId(Integer usuarioId);
             o.titulo AS titulo,
             o.descripcion,
             o.prioridad,
-            DATE_FORMAT(o.created_at, '%Y-%m-%d') AS fecha,
+            DATE_FORMAT(CONVERT_TZ(o.created_at, @@session.time_zone, '-05:00'), '%Y-%m-%d') AS fecha,
             o.estado AS estado,
-            CONCAT(u.nombre, ' ', u.apellidos) AS coordinador
+            CONCAT(u.nombre, ' ', u.apellidos) AS coordinador,
+            o.fotos_url AS fotosUrl
         FROM observaciones o
         JOIN instalaciones i ON o.instalacion_id = i.id
         JOIN usuarios u ON o.usuario_id = u.id

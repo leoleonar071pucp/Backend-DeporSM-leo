@@ -42,6 +42,15 @@ public class Instalacion {
     @Column(name = "requiere_mantenimiento")
     private Boolean requiereMantenimiento = false;
 
+    @Column(name = "latitud")
+    private Double latitud;
+
+    @Column(name = "longitud")
+    private Double longitud;
+
+    @Column(name = "radio_validacion")
+    private Integer radioValidacion = 100;
+
     @Column(name = "created_at")
     private Timestamp createdAt;
 

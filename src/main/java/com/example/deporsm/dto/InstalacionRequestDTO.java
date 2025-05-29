@@ -21,6 +21,9 @@ public class InstalacionRequestDTO {
     private String imagenUrl;
     private float precio;
     private Boolean activo;
+    private Double latitud;
+    private Double longitud;
+    private Integer radioValidacion;
 
     // Listas para las características, comodidades y reglas
     private List<String> caracteristicas;

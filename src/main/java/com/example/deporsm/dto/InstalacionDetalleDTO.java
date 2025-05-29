@@ -23,7 +23,10 @@ public class InstalacionDetalleDTO {
     private float precio;
     private Boolean activo;
     private String estado; // "disponible", "mantenimiento", "ocupada"
-    private String coordenadas; // Para mostrar en mapa
+    private String coordenadas; // Para mostrar en mapa (deprecated, usar latitud/longitud)
+    private Double latitud;
+    private Double longitud;
+    private Integer radioValidacion;
 
     // Nuevos campos
     private List<String> caracteristicas;

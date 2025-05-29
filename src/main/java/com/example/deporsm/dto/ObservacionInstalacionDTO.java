@@ -13,4 +13,5 @@ public interface ObservacionInstalacionDTO {
     String getFecha();
     String getEstado();
     String getCoordinador();
+    String getFotosUrl();
 }

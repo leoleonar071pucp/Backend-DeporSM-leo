@@ -18,24 +18,24 @@ public class AsistenciaCoordinadorDTO {
     private String nombreCoordinador;
     private Integer instalacionId;
     private String nombreInstalacion;
-    
+
     @JsonFormat(pattern = "yyyy-MM-dd")
     private Date fecha;
-    
-    @JsonFormat(pattern = "HH:mm:ss")
+
+    @JsonFormat(pattern = "HH:mm")
     private Time horaProgramadaInicio;
-    
-    @JsonFormat(pattern = "HH:mm:ss")
+
+    @JsonFormat(pattern = "HH:mm")
     private Time horaProgramadaFin;
-    
-    @JsonFormat(pattern = "HH:mm:ss")
+
+    @JsonFormat(pattern = "HH:mm")
     private Time horaEntrada;
-    
+
     private EstadoAsistencia estadoEntrada;
-    
-    @JsonFormat(pattern = "HH:mm:ss")
+
+    @JsonFormat(pattern = "HH:mm")
     private Time horaSalida;
-    
+
     private EstadoAsistencia estadoSalida;
     private String ubicacion;
     private String notas;

@@ -1,13 +1,8 @@
 package com.example.deporsm.dto;
 
-import com.example.deporsm.model.AsistenciaCoordinador.EstadoAsistencia;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.sql.Date;
-import java.sql.Time;
 
 @Data
 @NoArgsConstructor
@@ -15,25 +10,15 @@ import java.sql.Time;
 public class AsistenciaCoordinadorRequestDTO {
     private Integer coordinadorId;
     private Integer instalacionId;
-    
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private Date fecha;
-    
-    @JsonFormat(pattern = "HH:mm:ss")
-    private Time horaProgramadaInicio;
-    
-    @JsonFormat(pattern = "HH:mm:ss")
-    private Time horaProgramadaFin;
-    
-    @JsonFormat(pattern = "HH:mm:ss")
-    private Time horaEntrada;
-    
-    private EstadoAsistencia estadoEntrada;
-    
-    @JsonFormat(pattern = "HH:mm:ss")
-    private Time horaSalida;
-    
-    private EstadoAsistencia estadoSalida;
+
+    // Usar String para evitar problemas de deserialización
+    private String fecha; // formato yyyy-MM-dd
+    private String horaProgramadaInicio; // formato HH:mm
+    private String horaProgramadaFin; // formato HH:mm
+    private String horaEntrada; // formato HH:mm
+    private String estadoEntrada; // usar String para evitar problemas con enum
+    private String horaSalida; // formato HH:mm
+    private String estadoSalida; // usar String para evitar problemas con enum
     private String ubicacion;
     private String notas;
 }

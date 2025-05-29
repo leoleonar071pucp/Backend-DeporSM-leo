@@ -36,7 +36,7 @@ public class CorsConfig {
                 String[] origins = allowedOriginsString.split(",");
 
                 registry.addMapping("/**")
-                        .allowedOrigins(origins)
+                        .allowedOriginPatterns(origins) // Usar allowedOriginPatterns en lugar de allowedOrigins
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .exposedHeaders(String.join(",", EXPOSED_HEADERS))
@@ -54,10 +54,10 @@ public class CorsConfig {
         // Habilitar credenciales
         config.setAllowCredentials(true);
 
-        // Agregar todos los orígenes permitidos desde la configuración
+        // Agregar todos los orígenes permitidos desde la configuración usando allowedOriginPatterns
         String[] origins = allowedOriginsString.split(",");
         for (String origin : origins) {
-            config.addAllowedOrigin(origin.trim());
+            config.addAllowedOriginPattern(origin.trim()); // Usar addAllowedOriginPattern en lugar de addAllowedOrigin
         }
 
         // Configurar encabezados y métodos
