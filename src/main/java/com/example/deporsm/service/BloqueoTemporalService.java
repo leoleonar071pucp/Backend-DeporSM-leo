@@ -59,12 +59,17 @@ public class BloqueoTemporalService {
             throw new RuntimeException("La instalación no está disponible para reservas");
         }
 
+        // Convertir strings a tipos SQL
+        Date fecha = convertirStringADate(bloqueoDTO.getFecha());
+        Time horaInicio = convertirStringATime(bloqueoDTO.getHoraInicio());
+        Time horaFin = convertirStringATime(bloqueoDTO.getHoraFin());
+
         // Verificar si el horario está disponible (no reservado y no bloqueado temporalmente)
         if (!verificarDisponibilidadHorario(
                 instalacion.getId(),
-                bloqueoDTO.getFecha(),
-                bloqueoDTO.getHoraInicio(),
-                bloqueoDTO.getHoraFin())) {
+                fecha,
+                horaInicio,
+                horaFin)) {
             throw new RuntimeException("El horario seleccionado no está disponible");
         }
 
@@ -72,18 +77,18 @@ public class BloqueoTemporalService {
         BloqueoTemporal bloqueo = new BloqueoTemporal(
                 instalacion,
                 usuario,
-                bloqueoDTO.getFecha(),
-                bloqueoDTO.getHoraInicio(),
-                bloqueoDTO.getHoraFin());
+                fecha,
+                horaInicio,
+                horaFin);
 
         bloqueo = bloqueoTemporalRepository.save(bloqueo);
 
-        // Devolver el DTO con el token
+        // Devolver el DTO con el token (convertir de vuelta a strings)
         BloqueoTemporalDTO responseDTO = new BloqueoTemporalDTO(
                 bloqueo.getInstalacion().getId(),
-                bloqueo.getFecha(),
-                bloqueo.getHoraInicio(),
-                bloqueo.getHoraFin(),
+                bloqueo.getFecha().toString(),
+                bloqueo.getHoraInicio().toString(),
+                bloqueo.getHoraFin().toString(),
                 bloqueo.getToken());
 
         return responseDTO;
@@ -203,6 +208,42 @@ public class BloqueoTemporalService {
             // Si la tabla no existe, registrar el error pero no interrumpir la aplicación
             System.err.println("Error al limpiar bloqueos expirados: " + e.getMessage());
             // No propagar la excepción para evitar que la tarea programada falle
+        }
+    }
+
+    /**
+     * Convierte un string de fecha (YYYY-MM-DD) a java.sql.Date
+     * Evita problemas de zona horaria al usar Date.valueOf directamente
+     */
+    private Date convertirStringADate(String fechaStr) {
+        if (fechaStr == null || fechaStr.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            // Date.valueOf espera formato YYYY-MM-DD y no aplica conversiones de zona horaria
+            return Date.valueOf(fechaStr);
+        } catch (Exception e) {
+            System.err.println("[ERROR] Error al convertir fecha: " + fechaStr + " - " + e.getMessage());
+            throw new RuntimeException("Formato de fecha inválido: " + fechaStr + ". Use formato YYYY-MM-DD");
+        }
+    }
+
+    /**
+     * Convierte un string de tiempo (HH:MM o HH:MM:SS) a java.sql.Time
+     */
+    private Time convertirStringATime(String timeStr) {
+        if (timeStr == null || timeStr.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            // Si no tiene segundos, agregarlos
+            if (timeStr.length() == 5) {
+                timeStr += ":00";
+            }
+            return Time.valueOf(timeStr);
+        } catch (Exception e) {
+            System.err.println("[ERROR] Error al convertir tiempo: " + timeStr + " - " + e.getMessage());
+            throw new RuntimeException("Formato de tiempo inválido: " + timeStr + ". Use formato HH:MM o HH:MM:SS");
         }
     }
 }

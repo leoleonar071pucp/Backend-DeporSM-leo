@@ -246,6 +246,25 @@ public class UsuarioController {
         }
     }
 
+    @GetMapping("/preferencias-notificaciones")
+    public ResponseEntity<?> obtenerPreferenciasNotificaciones() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()
+            || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body("Usuario no autenticado");
+        }
+
+        String email = authentication.getName();
+        try {
+            PreferenciasNotificacionDTO preferencias = usuarioService.obtenerPreferenciasNotificaciones(email);
+            return ResponseEntity.ok(preferencias);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                .body("Error al obtener las preferencias de notificaciones: " + e.getMessage());
+        }
+    }
+
     @PutMapping("/preferencias-notificaciones")
     public ResponseEntity<?> actualizarPreferenciasNotificaciones(
             @RequestBody PreferenciasNotificacionDTO preferenciasDTO) {
@@ -263,7 +282,8 @@ public class UsuarioController {
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                 .body("Error al actualizar las preferencias de notificaciones: " + e.getMessage());
-        }    }
+        }
+    }
 
     @GetMapping("/allVecinos")
     public ResponseEntity<List<VecinoDTO>> listarVecinos() {

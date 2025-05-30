@@ -12,6 +12,5 @@ import lombok.Setter;
 public class PreferenciasNotificacionDTO {
     private boolean email;
     private boolean reservas;
-    private boolean promociones;
     private boolean mantenimiento;
 }

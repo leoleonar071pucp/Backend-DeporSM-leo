@@ -31,10 +31,10 @@ public class UsuarioService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
-    
+
     @Autowired
     private PasswordEncoder passwordEncoder;
-    
+
     @Autowired
     private PreferenciaNotificacionRepository preferenciaNotificacionRepository;
 
@@ -75,7 +75,7 @@ public class UsuarioService {
         if (authentication == null || !authentication.isAuthenticated()) {
             return Optional.empty();
         }
-        
+
         String email = authentication.getName();
         return usuarioRepository.findByEmail(email);
     }
@@ -88,21 +88,21 @@ public class UsuarioService {
      */
     public Optional<Usuario> actualizarPerfil(PerfilUsuarioDTO perfilDTO, Authentication authentication) {
         Optional<Usuario> usuarioOpt = obtenerPerfilUsuario(authentication);
-        
+
         if (usuarioOpt.isEmpty()) {
             return Optional.empty();
         }
-        
+
         Usuario usuario = usuarioOpt.get();
-        
+
         if (perfilDTO.getTelefono() != null) {
             usuario.setTelefono(perfilDTO.getTelefono());
         }
-        
+
         if (perfilDTO.getDireccion() != null) {
             usuario.setDireccion(perfilDTO.getDireccion());
         }
-        
+
         return Optional.of(usuarioRepository.save(usuario));
     }
 
@@ -125,14 +125,14 @@ public class UsuarioService {
     public Usuario actualizarPerfil(String email, ActualizarPerfilDTO perfilDTO) {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        
+
         // Actualizar sólo los campos permitidos
         usuario.setTelefono(perfilDTO.getTelefono());
         usuario.setDireccion(perfilDTO.getDireccion());
-        
+
         return usuarioRepository.save(usuario);
     }
-    
+
     /**
      * Cambia la contraseña de un usuario
      * @param email Email del usuario
@@ -142,47 +142,76 @@ public class UsuarioService {
     public void cambiarPassword(String email, CambioPasswordDTO cambioPasswordDTO) {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        
+
         // Verificar que la contraseña actual sea correcta
         if (!passwordEncoder.matches(cambioPasswordDTO.getPasswordActual(), usuario.getPassword())) {
             throw new RuntimeException("La contraseña actual es incorrecta");
         }
-        
+
         // Verificar que la nueva contraseña y su confirmación coincidan
         if (!cambioPasswordDTO.getPasswordNueva().equals(cambioPasswordDTO.getConfirmacionPassword())) {
             throw new RuntimeException("Las contraseñas no coinciden");
         }
-        
+
         // Actualizar contraseña
         usuario.setPassword(passwordEncoder.encode(cambioPasswordDTO.getPasswordNueva()));
         usuarioRepository.save(usuario);
     }
-    
+
     /**
      * Actualiza las preferencias de notificaciones de un usuario
      * @param email Email del usuario
      * @param preferenciasDTO Preferencias de notificaciones
      * @throws RuntimeException si no se encuentra el usuario
-     */    
+     */
     public void actualizarPreferenciasNotificaciones(String email, PreferenciasNotificacionDTO preferenciasDTO) {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        
+
         // Buscar preferencias existentes o crear nuevas
         PreferenciaNotificacion preferencias = preferenciaNotificacionRepository
                 .findByUsuarioId(usuario.getId())
                 .orElse(new PreferenciaNotificacion());
-        
+
         preferencias.setUsuario(usuario);
         preferencias.setEmail(preferenciasDTO.isEmail());
         preferencias.setReservas(preferenciasDTO.isReservas());
-        preferencias.setPromociones(preferenciasDTO.isPromociones());
         preferencias.setMantenimiento(preferenciasDTO.isMantenimiento());
-        
+
         preferenciaNotificacionRepository.save(preferencias);
-    }    /**
+    }
+
+    /**
+     * Obtiene las preferencias de notificaciones de un usuario
+     * @param email Email del usuario
+     * @return Preferencias de notificaciones
+     * @throws RuntimeException si no se encuentra el usuario
+     */
+    public PreferenciasNotificacionDTO obtenerPreferenciasNotificaciones(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // Buscar preferencias existentes o crear nuevas con valores por defecto
+        PreferenciaNotificacion preferencias = preferenciaNotificacionRepository
+                .findByUsuarioId(usuario.getId())
+                .orElse(new PreferenciaNotificacion());
+
+        // Si no existen preferencias, usar valores por defecto
+        if (preferencias.getId() == null) {
+            return new PreferenciasNotificacionDTO(true, true, true);
+        }
+
+        return new PreferenciasNotificacionDTO(
+            preferencias.getEmail() != null ? preferencias.getEmail() : true,
+            preferencias.getReservas() != null ? preferencias.getReservas() : true,
+            preferencias.getMantenimiento() != null ? preferencias.getMantenimiento() : true
+        );
+    }
+
+    /**
      * Obtiene todos los vecinos con su información básica y número de reservas
-     */    public List<VecinoDTO> listarVecinos() {
+     */
+    public List<VecinoDTO> listarVecinos() {
         List<VecinoDTOProjection> projections = usuarioRepository.findAllVecinos();
         return projections.stream()
             .map(p -> new VecinoDTO(
@@ -236,10 +265,10 @@ public class UsuarioService {
         Rol rol = new Rol();
         rol.setId(4); // ID 4 corresponde al rol 'vecino' en la base de datos
         usuario.setRol(rol);
-        
+
         // Activar por defecto
         usuario.setActivo(true);
-        
+
         return usuarioRepository.save(usuario);
     }
 
@@ -250,13 +279,13 @@ public class UsuarioService {
     public Usuario actualizarVecino(Integer id, Usuario datosActualizados) {
         Usuario vecino = usuarioRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Vecino no encontrado"));
-        
+
         // Actualizar solo campos permitidos
         vecino.setNombre(datosActualizados.getNombre());
         vecino.setApellidos(datosActualizados.getApellidos());
         vecino.setTelefono(datosActualizados.getTelefono());
         vecino.setDireccion(datosActualizados.getDireccion());
-        
+
         return usuarioRepository.save(vecino);
     }
 
@@ -267,7 +296,7 @@ public class UsuarioService {
     public void desactivarVecino(Integer id) {
         Usuario vecino = usuarioRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Vecino no encontrado"));
-        
+
         vecino.setActivo(false);
         usuarioRepository.save(vecino);
     }
@@ -279,7 +308,7 @@ public class UsuarioService {
     public void reactivarVecino(Integer id) {
         Usuario vecino = usuarioRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Vecino no encontrado"));
-        
+
         vecino.setActivo(true);
         usuarioRepository.save(vecino);
     }

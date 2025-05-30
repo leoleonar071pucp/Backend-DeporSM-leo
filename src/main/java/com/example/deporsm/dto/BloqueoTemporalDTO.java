@@ -5,17 +5,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.sql.Date;
-import java.sql.Time;
-
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class BloqueoTemporalDTO {
     private Integer instalacionId;
-    private Date fecha;
-    private Time horaInicio;
-    private Time horaFin;
+    private String fecha;           // Cambiar a String para evitar problemas de zona horaria
+    private String horaInicio;      // Cambiar a String para evitar problemas de zona horaria
+    private String horaFin;         // Cambiar a String para evitar problemas de zona horaria
     private String token;
 }

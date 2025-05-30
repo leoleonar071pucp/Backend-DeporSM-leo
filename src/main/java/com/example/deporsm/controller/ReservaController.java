@@ -40,7 +40,7 @@ public class ReservaController {
                 .map(reserva -> {
                     ReservaListDTO dto = new ReservaListDTO(
                             reserva.getId(),
-                            reserva.getUsuario().getNombre(),
+                            reserva.getUsuario().getNombre() + " " + reserva.getUsuario().getApellidos(),
                             reserva.getInstalacion().getNombre(),
                             reserva.getInstalacion().getUbicacion(), // Incluir ubicación
                             reserva.getMetodoPago(),                // Incluir método de pago

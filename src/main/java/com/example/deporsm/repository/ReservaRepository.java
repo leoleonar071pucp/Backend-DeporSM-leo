@@ -17,11 +17,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     @Query(value = """
     SELECT
         r.id,
-        CONCAT(
-            SUBSTRING_INDEX(u.nombre, ' ', 1),
-            ' ',
-            SUBSTRING_INDEX(u.apellidos, ' ', 1)
-        ) AS usuarioNombre,
+        CONCAT(u.nombre, ' ', u.apellidos) AS usuarioNombre,
         i.nombre AS instalacionNombre,
         i.ubicacion AS instalacionUbicacion,
         r.metodo_pago AS metodoPago,
@@ -42,11 +38,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     @Query(value = """
     SELECT
         r.id,
-        CONCAT(
-            SUBSTRING_INDEX(u.nombre, ' ', 1),
-            ' ',
-            SUBSTRING_INDEX(u.apellidos, ' ', 1)
-        ) AS usuarioNombre,
+        CONCAT(u.nombre, ' ', u.apellidos) AS usuarioNombre,
         i.nombre AS instalacionNombre,
         i.ubicacion AS instalacionUbicacion,
         r.metodo_pago AS metodoPago,
@@ -60,11 +52,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     JOIN usuarios u ON r.usuario_id = u.id
     JOIN instalaciones i ON r.instalacion_id = i.id
     WHERE (:texto IS NULL OR
-        LOWER(CONCAT(
-            SUBSTRING_INDEX(u.nombre, ' ', 1),
-            ' ',
-            SUBSTRING_INDEX(u.apellidos, ' ', 1)
-        )) LIKE LOWER(CONCAT('%', :texto, '%')) OR
+        LOWER(CONCAT(u.nombre, ' ', u.apellidos)) LIKE LOWER(CONCAT('%', :texto, '%')) OR
         LOWER(i.nombre) LIKE LOWER(CONCAT('%', :texto, '%')))
     AND (:fecha IS NULL OR r.fecha = :fecha)
     ORDER BY r.fecha DESC, r.hora_inicio DESC
@@ -110,7 +98,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     @Query("SELECT new com.example.deporsm.dto.ReservaDetalleDTO(" +
             "r.id, " +
             "u.id, " +
-            "u.nombre, " +
+            "CONCAT(u.nombre, ' ', u.apellidos), " +
             "i.id, " +
             "i.nombre, " +
             "i.ubicacion, " +
@@ -137,11 +125,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     @Query(value = """
     SELECT
         r.id AS idReserva,
-        CONCAT(
-            SUBSTRING_INDEX(u.nombre, ' ', 1),
-            ' ',
-            SUBSTRING_INDEX(u.apellidos, ' ', 1)
-        ) AS nombreUsuario,
+        CONCAT(u.nombre, ' ', u.apellidos) AS nombreUsuario,
         i.nombre AS nombreInstalacion,
         i.id AS instalacionId,
         DATE_FORMAT(r.fecha, '%Y-%m-%d') AS fecha,

@@ -15,6 +15,8 @@ import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.sql.Date;
+import java.sql.Time;
 import java.sql.Timestamp;
 import java.math.BigDecimal;
 
@@ -73,12 +75,17 @@ public class ReservaService {
         // Liberar cualquier bloqueo temporal que el usuario pudiera tener
         bloqueoTemporalRepository.deleteByUsuarioId(usuario.getId());
 
+        // Convertir strings a tipos SQL
+        Date fecha = convertirStringADate(reservaDTO.getFecha());
+        Time horaInicio = convertirStringATime(reservaDTO.getHoraInicio());
+        Time horaFin = convertirStringATime(reservaDTO.getHoraFin());
+
         // Verificar disponibilidad de horario
         boolean horarioDisponible = verificarDisponibilidadHorario(
                 instalacion.getId(),
-                reservaDTO.getFecha(),
-                reservaDTO.getHoraInicio(),
-                reservaDTO.getHoraFin());
+                fecha,
+                horaInicio,
+                horaFin);
 
         if (!horarioDisponible) {
             throw new RuntimeException("El horario seleccionado no está disponible");
@@ -87,9 +94,9 @@ public class ReservaService {
         // Verificar si hay conflicto con otras reservas del mismo usuario
         boolean hayConflicto = verificarConflictoHorarioUsuario(
                 usuario.getId(),
-                reservaDTO.getFecha(),
-                reservaDTO.getHoraInicio(),
-                reservaDTO.getHoraFin());
+                fecha,
+                horaInicio,
+                horaFin);
 
         if (hayConflicto) {
             throw new RuntimeException("El horario seleccionado entra en conflicto con otra reserva que ya tienes para ese día");
@@ -99,9 +106,9 @@ public class ReservaService {
         Reserva reserva = new Reserva();
         reserva.setUsuario(usuario);
         reserva.setInstalacion(instalacion);
-        reserva.setFecha(reservaDTO.getFecha());
-        reserva.setHoraInicio(reservaDTO.getHoraInicio());
-        reserva.setHoraFin(reservaDTO.getHoraFin());
+        reserva.setFecha(fecha);
+        reserva.setHoraInicio(horaInicio);
+        reserva.setHoraFin(horaFin);
 
         // Manejar el campo numeroAsistentes de forma segura
         try {
@@ -353,7 +360,7 @@ public class ReservaService {
           // Usamos JPQL con proyección para evitar los campos problemáticos e incluir ubicación, método de pago e imagen
         String jpql = "SELECT new com.example.deporsm.dto.ReservaListDTO(" +
                 "r.id, " +
-                "u.nombre, " +
+                "CONCAT(u.nombre, ' ', u.apellidos), " +
                 "i.nombre, " +
                 "i.ubicacion, " +
                 "r.metodoPago, " +
@@ -466,5 +473,41 @@ public class ReservaService {
         }
 
         return reservaActualizada;
+    }
+
+    /**
+     * Convierte un string de fecha (YYYY-MM-DD) a java.sql.Date
+     * Evita problemas de zona horaria al usar Date.valueOf directamente
+     */
+    private Date convertirStringADate(String fechaStr) {
+        if (fechaStr == null || fechaStr.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            // Date.valueOf espera formato YYYY-MM-DD y no aplica conversiones de zona horaria
+            return Date.valueOf(fechaStr);
+        } catch (Exception e) {
+            System.err.println("[ERROR] Error al convertir fecha: " + fechaStr + " - " + e.getMessage());
+            throw new RuntimeException("Formato de fecha inválido: " + fechaStr + ". Use formato YYYY-MM-DD");
+        }
+    }
+
+    /**
+     * Convierte un string de tiempo (HH:MM o HH:MM:SS) a java.sql.Time
+     */
+    private Time convertirStringATime(String timeStr) {
+        if (timeStr == null || timeStr.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            // Si no tiene segundos, agregarlos
+            if (timeStr.length() == 5) {
+                timeStr += ":00";
+            }
+            return Time.valueOf(timeStr);
+        } catch (Exception e) {
+            System.err.println("[ERROR] Error al convertir tiempo: " + timeStr + " - " + e.getMessage());
+            throw new RuntimeException("Formato de tiempo inválido: " + timeStr + ". Use formato HH:MM o HH:MM:SS");
+        }
     }
 }
