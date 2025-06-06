@@ -6,8 +6,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.Arrays;
 import java.util.List;
 
@@ -15,7 +13,7 @@ import java.util.List;
 public class CorsConfig {
 
     // Orígenes permitidos desde la configuración
-    @Value("${app.cors.allowed-origins:http://localhost:3000}")
+    @Value("${app.cors.allowed-origins:}")
     private String allowedOriginsString;
 
     // Lista de encabezados expuestos
@@ -27,56 +25,66 @@ public class CorsConfig {
         "Access-Control-Allow-Credentials"
     );
 
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                // Convertir la cadena de orígenes separados por comas en un array
-                String[] origins = allowedOriginsString.split(",");
-
-                registry.addMapping("/**")
-                        .allowedOriginPatterns(origins) // Usar allowedOriginPatterns en lugar de allowedOrigins
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*")
-                        .exposedHeaders(String.join(",", EXPOSED_HEADERS))
-                        .allowCredentials(true)
-                        .maxAge(86400);
-            }
-        };
-    }
-
+    /**
+     * Configuración CORS principal usando CorsFilter para máximo control
+     */
     @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
-
-        // Habilitar credenciales
+        
+        // Configurar credenciales
         config.setAllowCredentials(true);
-
-        // Agregar todos los orígenes permitidos desde la configuración usando allowedOriginPatterns
-        String[] origins = allowedOriginsString.split(",");
+        
+        // Determinar orígenes permitidos de forma segura
+        String safeOrigins = getSafeOrigins();
+        System.out.println("🌐 CORS: Configurando orígenes permitidos: " + safeOrigins);
+        
+        // Dividir y agregar orígenes
+        String[] origins = safeOrigins.split(",");
         for (String origin : origins) {
-            config.addAllowedOriginPattern(origin.trim()); // Usar addAllowedOriginPattern en lugar de addAllowedOrigin
+            String trimmedOrigin = origin.trim();
+            if (!trimmedOrigin.isEmpty() && !trimmedOrigin.equals("*")) {
+                config.addAllowedOriginPattern(trimmedOrigin);
+                System.out.println("✅ CORS: Agregado origen: " + trimmedOrigin);
+            }
         }
-
-        // Configurar encabezados y métodos
+        
+        // Configurar headers
         config.addAllowedHeader("*");
-
-        // Exponer encabezados específicos
         EXPOSED_HEADERS.forEach(config::addExposedHeader);
-
-        // Permitir todos los métodos HTTP comunes
+        
+        // Configurar métodos
         config.addAllowedMethod("GET");
         config.addAllowedMethod("POST");
         config.addAllowedMethod("PUT");
         config.addAllowedMethod("DELETE");
         config.addAllowedMethod("OPTIONS");
-
-        // Tiempo de caché para respuestas preflight
+        config.addAllowedMethod("PATCH");
+        
+        // Cache preflight
         config.setMaxAge(86400L);
-
+        
+        // Registrar configuración
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
+    }
+    
+    /**
+     * Obtiene orígenes seguros, nunca devuelve "*"
+     */
+    private String getSafeOrigins() {
+        // Si la configuración está vacía, null o es "*", usar localhost
+        if (allowedOriginsString == null || 
+            allowedOriginsString.trim().isEmpty() || 
+            allowedOriginsString.trim().equals("*")) {
+            return "http://localhost:3000";
+        }
+        
+        // Si contiene "*", reemplazar con localhost (medida de seguridad extra)
+        String sanitized = allowedOriginsString.replaceAll("\\*", "http://localhost:3000");
+        
+        // Asegurar que no quede vacío
+        return sanitized.trim().isEmpty() ? "http://localhost:3000" : sanitized;
     }
 }
