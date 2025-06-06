@@ -157,13 +157,13 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
         TIME_FORMAT(r.hora_fin, '%H:%i') as hora_fin,
         r.estado,
         r.estado_pago,
-        r.metodo_pago
+        COALESCE(r.metodo_pago, '') as metodo_pago
     FROM reservas r
     JOIN usuarios u ON r.usuario_id = u.id
     JOIN instalaciones i ON r.instalacion_id = i.id
     WHERE DATE(r.created_at) BETWEEN :fechaInicio AND :fechaFin
     AND (:instalacionId IS NULL OR r.instalacion_id = :instalacionId)
-    ORDER BY r.created_at DESC, r.hora_inicio DESC
+    ORDER BY r.id ASC
     """, nativeQuery = true)
     List<Object[]> findReservasForReport(
         @Param("fechaInicio") LocalDate fechaInicio,
@@ -193,7 +193,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
         AND (:instalacionId IS NULL OR r.instalacion_id = :instalacionId)
         GROUP BY DATE(r.created_at), i.id, i.nombre
     ) AS subquery
-    ORDER BY fecha_agrupada DESC
+    ORDER BY fecha_agrupada ASC
     """, nativeQuery = true)
     List<Object[]> findIngresosForReport(
         @Param("fechaInicio") LocalDate fechaInicio,

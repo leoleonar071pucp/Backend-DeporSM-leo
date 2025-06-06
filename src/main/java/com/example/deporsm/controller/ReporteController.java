@@ -117,7 +117,7 @@ public class ReporteController {
             // Determinar el tipo de contenido
             String contentType;
             if (reporte.getFormato().equals("excel")) {
-                contentType = "text/csv";
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             } else {
                 contentType = "application/pdf";
             }
@@ -152,8 +152,9 @@ public class ReporteController {
 
             try {
                 // Crear la respuesta
-                // Crear un nombre de archivo más amigable con el rango de fechas
-                String filename = reporte.getNombre() + " (" + reporte.getRangoFechas() + ")." + (reporte.getFormato().equals("excel") ? "csv" : "pdf");
+                // Crear un nombre de archivo más amigable con timestamp
+                String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                String filename = reporte.getNombre().replaceAll("[^a-zA-Z0-9\\s]", "_") + "_" + timestamp + "." + (reporte.getFormato().equals("excel") ? "xlsx" : "pdf");
                 System.out.println("Nombre de archivo para descarga: " + filename);
 
                 return ResponseEntity.ok()
@@ -184,6 +185,27 @@ public class ReporteController {
             return ResponseEntity.ok(reporte);
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * Endpoint específico para generar reportes de asistencias
+     */
+    @PostMapping("/asistencias")
+    public ResponseEntity<?> generarReporteAsistencias(@RequestBody ReporteRequestDTO requestDTO) {
+        try {
+            // Forzar el tipo a "asistencias"
+            requestDTO.setTipo("asistencias");
+
+            // Obtener el usuario autenticado
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+
+            ReporteDTO reporte = reporteService.generarReporte(requestDTO, email);
+            return ResponseEntity.ok(reporte);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error al generar reporte de asistencias: " + e.getMessage());
         }
     }
 }

@@ -99,12 +99,12 @@ public interface MantenimientoInstalacionRepository extends JpaRepository<Manten
         DATE_FORMAT(m.fecha_inicio, '%d/%m/%Y %H:%i') as fecha_inicio,
         DATE_FORMAT(m.fecha_fin, '%d/%m/%Y %H:%i') as fecha_fin,
         m.estado,
-        m.afecta_disponibilidad
+        CASE WHEN m.afecta_disponibilidad = 1 THEN 'Sí' ELSE 'No' END as afecta_disponibilidad
     FROM mantenimiento_instalaciones m
     JOIN instalaciones i ON m.instalacion_id = i.id
     WHERE DATE(m.fecha_inicio) BETWEEN :fechaInicio AND :fechaFin
     AND (:instalacionId IS NULL OR m.instalacion_id = :instalacionId)
-    ORDER BY m.fecha_inicio DESC
+    ORDER BY m.id ASC
     """, nativeQuery = true)
     List<Object[]> findMantenimientosForReport(
         @Param("fechaInicio") LocalDate fechaInicio,
