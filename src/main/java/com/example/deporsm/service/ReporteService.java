@@ -6,12 +6,8 @@ import com.example.deporsm.model.Instalacion;
 import com.example.deporsm.model.Reporte;
 import com.example.deporsm.model.Usuario;
 import com.example.deporsm.repository.*;
-import com.itextpdf.text.Document;
-import com.itextpdf.text.DocumentException;
-import com.itextpdf.text.Font;
-import com.itextpdf.text.FontFactory;
-import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.pdf.PdfWriter;
+import com.example.deporsm.util.ExcelGenerator;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -28,6 +24,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -49,6 +47,15 @@ public class ReporteService {
     @Autowired
     private MantenimientoInstalacionRepository mantenimientoInstalacionRepository;
 
+    @Autowired
+    private AsistenciaCoordinadorRepository asistenciaCoordinadorRepository;
+
+    @Autowired
+    private ExcelGenerator excelGenerator;
+
+    @Autowired
+    private PdfReportService pdfReportService;
+
     @Value("${app.reportes.directorio:./reportes}")
     private String reportesDirectorio;
 
@@ -58,6 +65,9 @@ public class ReporteService {
     public ReporteDTO generarReporte(ReporteRequestDTO requestDTO, String emailUsuario) throws Exception {
         // Verificar que el directorio de reportes exista
         crearDirectorioSiNoExiste();
+
+        // Limpiar archivos antiguos (más de 7 días)
+        limpiarArchivosAntiguos();
 
         // Obtener el usuario que solicita el reporte
         Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
@@ -89,49 +99,76 @@ public class ReporteService {
             throw new Exception("Formato de fecha inválido. Use el formato yyyy-MM-dd");
         }
 
-        // Generar el nombre del archivo
-        String nombreArchivo = "reporte_" + requestDTO.getTipo() + "_" + fechaInicio + "_" + fechaFin;
+        // Generar el nombre del archivo con timestamp único
+        String timestamp = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String nombreArchivo;
 
-        if (instalacion != null) {
-            nombreArchivo += "_" + instalacion.getNombre().replaceAll("\\s+", "_").toLowerCase();
+        if ("asistencias".equals(requestDTO.getTipo())) {
+            // Para asistencias, usar formato más corto y claro
+            nombreArchivo = "reporte_asistencias";
+
+            // Agregar información de filtros si está disponible
+            if (requestDTO.getFiltrosTexto() != null && !requestDTO.getFiltrosTexto().isEmpty()) {
+                nombreArchivo += requestDTO.getFiltrosTexto();
+            }
+
+            // Agregar fechas específicas solo si se están usando filtros de fecha
+            if (requestDTO.getFechasTexto() != null && !requestDTO.getFechasTexto().isEmpty()) {
+                nombreArchivo += requestDTO.getFechasTexto();
+            }
+        } else {
+            // Para otros tipos de reportes, usar formato original
+            nombreArchivo = "reporte_" + requestDTO.getTipo() + "_" + fechaInicio + "_" + fechaFin;
+
+            if (instalacion != null) {
+                nombreArchivo += "_" + instalacion.getNombre().replaceAll("\\s+", "_").toLowerCase();
+            }
         }
 
-        nombreArchivo += "." + (requestDTO.getFormato().equals("excel") ? "csv" : "pdf");
+        nombreArchivo += "_" + timestamp + "." + (requestDTO.getFormato().equals("excel") ? "xlsx" : "pdf");
 
         // Ruta completa del archivo
         String rutaArchivo = reportesDirectorio + File.separator + nombreArchivo;
 
+        // Verificar si el archivo ya existe y está en uso, generar nombre alternativo
+        rutaArchivo = generarRutaArchivoUnica(rutaArchivo);
+
         // Generar el contenido del reporte según el tipo
-        String contenido = "";
         String descripcion = "";
 
         switch (requestDTO.getTipo()) {
             case "reservas":
-                contenido = generarReporteReservas(fechaInicioDate, fechaFinDate,
-                                                  instalacion, requestDTO.getFormato());
                 descripcion = "Información detallada de reservas: usuarios, horarios, estados de pago";
                 break;
             case "ingresos":
-                contenido = generarReporteIngresos(fechaInicioDate, fechaFinDate,
-                                                 instalacion, requestDTO.getFormato());
                 descripcion = "Resumen de ingresos por reservas y servicios";
                 break;
             case "instalaciones":
-                contenido = generarReporteInstalaciones(fechaInicioDate, fechaFinDate,
-                                                      instalacion, requestDTO.getFormato());
                 descripcion = "Métricas de utilización: frecuencia, horarios más solicitados, capacidad";
                 break;
             case "mantenimiento":
-                contenido = generarReporteMantenimiento(fechaInicioDate, fechaFinDate,
-                                                      instalacion, requestDTO.getFormato());
                 descripcion = "Registro de mantenimientos realizados y programados";
+                break;
+            case "asistencias":
+                descripcion = "Historial de asistencias de coordinadores";
                 break;
             default:
                 throw new Exception("Tipo de reporte no válido");
         }
 
-        // Escribir el contenido al archivo
-        escribirArchivo(rutaArchivo, contenido);
+        // Generar y escribir el archivo según el formato
+        if (requestDTO.getFormato().equals("excel")) {
+            // Generar archivo Excel usando Apache POI
+            generarArchivoExcel(requestDTO, fechaInicioDate, fechaFinDate, instalacion, rutaArchivo);
+        } else if (requestDTO.getFormato().equals("pdf")) {
+            // Generar archivo PDF con diseño corporativo
+            String rangoFechas = fechaInicio + " - " + fechaFin;
+            generarArchivoPdfCorporativo(requestDTO, fechaInicioDate, fechaFinDate, instalacion, rutaArchivo, rangoFechas);
+        } else {
+            // Generar archivo de texto
+            String contenido = generarContenidoTexto(requestDTO.getTipo(), fechaInicioDate, fechaFinDate, instalacion, requestDTO.getFormato());
+            escribirArchivo(rutaArchivo, contenido);
+        }
 
         // Obtener el tamaño del archivo
         String tamano = obtenerTamanoArchivo(rutaArchivo);
@@ -227,25 +264,23 @@ public class ReporteService {
                 LocalDate fechaInicio = LocalDate.parse(reporte.getRangoFechas().split(" - ")[0]);
                 LocalDate fechaFin = LocalDate.parse(reporte.getRangoFechas().split(" - ")[1]);
 
-                // Regenerar el contenido del reporte
-                String contenido = "";
-                switch (tipo) {
-                    case "reservas":
-                        contenido = generarReporteReservas(fechaInicio, fechaFin, reporte.getInstalacion(), formato);
-                        break;
-                    case "ingresos":
-                        contenido = generarReporteIngresos(fechaInicio, fechaFin, reporte.getInstalacion(), formato);
-                        break;
-                    case "instalaciones":
-                        contenido = generarReporteInstalaciones(fechaInicio, fechaFin, reporte.getInstalacion(), formato);
-                        break;
-                    case "mantenimiento":
-                        contenido = generarReporteMantenimiento(fechaInicio, fechaFin, reporte.getInstalacion(), formato);
-                        break;
-                }
+                // Regenerar el archivo según el formato
+                if (formato.equals("excel")) {
+                    // Para regeneración, crear un requestDTO básico sin filtros adicionales
+                    ReporteRequestDTO regenerateDTO = new ReporteRequestDTO();
+                    regenerateDTO.setTipo(tipo);
+                    regenerateDTO.setFormato(formato);
+                    regenerateDTO.setFechaInicio(fechaInicio.toString());
+                    regenerateDTO.setFechaFin(fechaFin.toString());
+                    regenerateDTO.setInstalacionId(reporte.getInstalacion() != null ? reporte.getInstalacion().getId() : null);
 
-                // Escribir el archivo
-                escribirArchivo(reporte.getRutaArchivo(), contenido);
+                    // Generar archivo Excel usando Apache POI
+                    generarArchivoExcel(regenerateDTO, fechaInicio, fechaFin, reporte.getInstalacion(), reporte.getRutaArchivo());
+                } else {
+                    // Generar archivo de texto/PDF
+                    String contenido = generarContenidoTexto(tipo, fechaInicio, fechaFin, reporte.getInstalacion(), formato);
+                    escribirArchivo(reporte.getRutaArchivo(), contenido);
+                }
                 System.out.println("Reporte regenerado exitosamente");
             }
 
@@ -264,6 +299,214 @@ public class ReporteService {
             throw e;
         }
     }
+
+    /**
+     * Genera un archivo PDF con diseño corporativo
+     */
+    private void generarArchivoPdfCorporativo(ReporteRequestDTO requestDTO, LocalDate fechaInicio, LocalDate fechaFin,
+                                            Instalacion instalacion, String rutaArchivo, String rangoFechas) throws Exception {
+        List<String> headers = new ArrayList<>();
+        List<List<Object>> data = new ArrayList<>();
+
+        // Obtener datos según el tipo de reporte
+        switch (requestDTO.getTipo()) {
+            case "reservas":
+                headers = Arrays.asList("ID", "Usuario", "Instalación", "Fecha", "Hora Inicio",
+                                      "Hora Fin", "Estado", "Estado Pago", "Método Pago");
+                List<Object[]> reservas = reservaRepository.findReservasForReport(
+                    fechaInicio, fechaFin, instalacion != null ? instalacion.getId() : null);
+                for (Object[] reserva : reservas) {
+                    List<Object> row = new ArrayList<>();
+                    for (Object item : reserva) {
+                        row.add(item != null ? item : "");
+                    }
+                    data.add(row);
+                }
+                break;
+
+            case "mantenimiento":
+                headers = Arrays.asList("ID", "Instalación", "Tipo", "Descripción", "Fecha Inicio",
+                                      "Fecha Fin", "Estado", "Afecta Disponibilidad");
+                List<Object[]> mantenimientos = mantenimientoInstalacionRepository.findMantenimientosForReport(
+                    fechaInicio, fechaFin, instalacion != null ? instalacion.getId() : null);
+                for (Object[] mantenimiento : mantenimientos) {
+                    List<Object> row = new ArrayList<>();
+                    for (Object item : mantenimiento) {
+                        row.add(item != null ? item : "");
+                    }
+                    data.add(row);
+                }
+                break;
+
+            case "asistencias":
+                headers = Arrays.asList("ID", "Coordinador", "Instalación", "Fecha", "Hora Programada Inicio",
+                                      "Hora Programada Fin", "Hora Entrada", "Estado Entrada", "Hora Salida",
+                                      "Estado Salida", "Ubicación");
+                List<Object[]> asistencias = asistenciaCoordinadorRepository.findAsistenciasForReport(
+                    fechaInicio, fechaFin,
+                    requestDTO.getCoordinadorNombre(),
+                    requestDTO.getInstalacionNombre(),
+                    requestDTO.getEstadoEntrada(),
+                    requestDTO.getEstadoSalida());
+                for (Object[] asistencia : asistencias) {
+                    List<Object> row = new ArrayList<>();
+                    for (Object item : asistencia) {
+                        row.add(item != null ? item : "");
+                    }
+                    data.add(row);
+                }
+                break;
+
+            default:
+                throw new Exception("Tipo de reporte no soportado para PDF: " + requestDTO.getTipo());
+        }
+
+        // Generar PDF usando el servicio especializado
+        pdfReportService.generarPdfCorporativo(rutaArchivo, requestDTO.getTipo(),
+                                             headers, data, rangoFechas);
+    }
+
+    /**
+     * Genera un archivo Excel usando Apache POI
+     */
+    private void generarArchivoExcel(ReporteRequestDTO requestDTO, LocalDate fechaInicio, LocalDate fechaFin,
+                                   Instalacion instalacion, String rutaArchivo) throws Exception {
+        try {
+            System.out.println("Iniciando generación de archivo Excel: " + rutaArchivo);
+            System.out.println("Tipo: " + requestDTO.getTipo() + ", Fechas: " + fechaInicio + " - " + fechaFin);
+
+            List<String> headers = new ArrayList<>();
+            List<List<Object>> data = new ArrayList<>();
+            String sheetName = "";
+
+        switch (requestDTO.getTipo()) {
+            case "reservas":
+                System.out.println("Generando reporte de reservas...");
+                System.out.println("Fechas: " + fechaInicio + " - " + fechaFin);
+                System.out.println("Instalación ID: " + (instalacion != null ? instalacion.getId() : "null"));
+                headers = Arrays.asList("ID", "Usuario", "Instalación", "Fecha", "Hora Inicio",
+                                      "Hora Fin", "Estado", "Estado Pago", "Método Pago");
+                sheetName = "Reservas";
+                List<Object[]> reservas = reservaRepository.findReservasForReport(
+                    fechaInicio, fechaFin, instalacion != null ? instalacion.getId() : null);
+                System.out.println("Encontradas " + reservas.size() + " reservas");
+
+                for (int i = 0; i < reservas.size(); i++) {
+                    Object[] reserva = reservas.get(i);
+                    System.out.println("Procesando reserva " + (i + 1) + ":");
+                    List<Object> row = new ArrayList<>();
+                    for (int j = 0; j < reserva.length; j++) {
+                        Object item = reserva[j];
+                        System.out.println("  Campo " + j + ": " + (item != null ? item.toString() + " (" + item.getClass().getSimpleName() + ")" : "null"));
+                        row.add(item != null ? item : "");
+                    }
+                    data.add(row);
+                }
+                break;
+            case "ingresos":
+                headers = Arrays.asList("Fecha", "Instalación", "Total Reservas", "Total Ingresos");
+                sheetName = "Ingresos";
+                List<Object[]> ingresos = reservaRepository.findIngresosForReport(
+                    fechaInicio, fechaFin, instalacion != null ? instalacion.getId() : null);
+                for (Object[] ingreso : ingresos) {
+                    List<Object> row = new ArrayList<>();
+                    for (Object item : ingreso) {
+                        row.add(item);
+                    }
+                    data.add(row);
+                }
+                break;
+            case "instalaciones":
+                headers = Arrays.asList("Instalación", "Total Reservas", "Horas Reservadas",
+                                      "Porcentaje Ocupación", "Horario Más Popular");
+                sheetName = "Uso de Instalaciones";
+                List<Object[]> usos = reservaRepository.findInstalacionesUsageForReport(
+                    fechaInicio, fechaFin, instalacion != null ? instalacion.getId() : null);
+                for (Object[] uso : usos) {
+                    List<Object> row = new ArrayList<>();
+                    for (Object item : uso) {
+                        row.add(item);
+                    }
+                    data.add(row);
+                }
+                break;
+            case "mantenimiento":
+                headers = Arrays.asList("ID", "Instalación", "Descripción", "Fecha Inicio",
+                                      "Fecha Fin", "Estado", "Afecta Disponibilidad");
+                sheetName = "Mantenimiento";
+                List<Object[]> mantenimientos = mantenimientoInstalacionRepository.findMantenimientosForReport(
+                    fechaInicio, fechaFin, instalacion != null ? instalacion.getId() : null);
+                for (Object[] mantenimiento : mantenimientos) {
+                    List<Object> row = new ArrayList<>();
+                    for (Object item : mantenimiento) {
+                        row.add(item);
+                    }
+                    data.add(row);
+                }
+                break;
+            case "asistencias":
+                System.out.println("Generando reporte de asistencias...");
+                System.out.println("Filtros aplicados: coordinador=" + requestDTO.getCoordinadorNombre() +
+                                 ", instalacion=" + requestDTO.getInstalacionNombre() +
+                                 ", estadoEntrada=" + requestDTO.getEstadoEntrada() +
+                                 ", estadoSalida=" + requestDTO.getEstadoSalida());
+                headers = Arrays.asList("ID", "Coordinador", "Instalación", "Fecha", "Hora Programada Inicio",
+                                      "Hora Programada Fin", "Hora Entrada", "Estado Entrada", "Hora Salida",
+                                      "Estado Salida", "Ubicación");
+                sheetName = "Asistencias";
+                List<Object[]> asistencias = asistenciaCoordinadorRepository.findAsistenciasForReport(
+                    fechaInicio, fechaFin,
+                    requestDTO.getCoordinadorNombre(),
+                    requestDTO.getInstalacionNombre(),
+                    requestDTO.getEstadoEntrada(),
+                    requestDTO.getEstadoSalida());
+                System.out.println("Encontradas " + asistencias.size() + " asistencias");
+                for (Object[] asistencia : asistencias) {
+                    List<Object> row = new ArrayList<>();
+                    for (Object item : asistencia) {
+                        row.add(item);
+                    }
+                    data.add(row);
+                }
+                break;
+        }
+
+        // Generar el archivo Excel
+        byte[] excelBytes = excelGenerator.generateExcel(headers, data, sheetName);
+
+            // Escribir el archivo
+            try (FileOutputStream fos = new FileOutputStream(rutaArchivo)) {
+                fos.write(excelBytes);
+                System.out.println("Archivo Excel generado exitosamente: " + rutaArchivo);
+            }
+        } catch (Exception e) {
+            System.err.println("Error al generar archivo Excel: " + e.getMessage());
+            e.printStackTrace();
+            throw new Exception("Error al generar archivo Excel: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Genera contenido de texto para PDF u otros formatos
+     */
+    private String generarContenidoTexto(String tipo, LocalDate fechaInicio, LocalDate fechaFin,
+                                       Instalacion instalacion, String formato) {
+        switch (tipo) {
+            case "reservas":
+                return generarReporteReservas(fechaInicio, fechaFin, instalacion, formato);
+            case "ingresos":
+                return generarReporteIngresos(fechaInicio, fechaFin, instalacion, formato);
+            case "instalaciones":
+                return generarReporteInstalaciones(fechaInicio, fechaFin, instalacion, formato);
+            case "mantenimiento":
+                return generarReporteMantenimiento(fechaInicio, fechaFin, instalacion, formato);
+            case "asistencias":
+                return generarReporteAsistencias(fechaInicio, fechaFin, instalacion, formato);
+            default:
+                return "";
+        }
+    }
+
     // Métodos privados para la generación de reportes
 
     private String generarReporteReservas(LocalDate fechaInicio, LocalDate fechaFin,
@@ -499,50 +742,10 @@ public class ReporteService {
         System.out.println("Escribiendo archivo en: " + rutaArchivo);
         System.out.println("Tamaño del contenido: " + contenido.length() + " caracteres");
 
-        // Verificar si es un archivo PDF
-        if (rutaArchivo.toLowerCase().endsWith(".pdf")) {
-            try {
-                // Crear un documento PDF
-                Document document = new Document();
-                PdfWriter.getInstance(document, new FileOutputStream(rutaArchivo));
-                document.open();
-
-                // Configurar fuente
-                Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16);
-                Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 12);
-
-                // Dividir el contenido en líneas
-                String[] lines = contenido.split("\n");
-
-                // Procesar cada línea
-                for (String line : lines) {
-                    // Detectar títulos (líneas en mayúsculas o con =)
-                    if (line.equals(line.toUpperCase()) && !line.trim().isEmpty() || line.contains("=====")) {
-                        // Añadir espacio antes de los títulos (excepto el primero)
-                        if (!line.equals(lines[0])) {
-                            document.add(new Paragraph(" "));
-                        }
-                        document.add(new Paragraph(line, titleFont));
-                    } else if (line.trim().isEmpty()) {
-                        // Línea vacía
-                        document.add(new Paragraph(" "));
-                    } else {
-                        // Texto normal
-                        document.add(new Paragraph(line, normalFont));
-                    }
-                }
-
-                document.close();
-                System.out.println("Archivo PDF creado correctamente: " + rutaArchivo);
-            } catch (DocumentException e) {
-                throw new IOException("Error al crear el documento PDF: " + e.getMessage(), e);
-            }
-        } else {
-            // Para archivos CSV u otros formatos de texto
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(rutaArchivo))) {
-                writer.write(contenido);
-                writer.flush();
-            }
+        // Para archivos CSV u otros formatos de texto (PDF ya no se maneja aquí)
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(rutaArchivo))) {
+            writer.write(contenido);
+            writer.flush();
         }
 
         // Verificar que el archivo se creó correctamente
@@ -575,6 +778,7 @@ public class ReporteService {
             case "ingresos": return "Ingresos";
             case "instalaciones": return "Uso de Instalaciones";
             case "mantenimiento": return "Mantenimiento";
+            case "asistencias": return "Asistencias";
             default: return tipo;
         }
     }
@@ -593,6 +797,154 @@ public class ReporteService {
             reporte.getRutaArchivo(),
             reporte.getInstalacion() != null ? reporte.getInstalacion().getId() : null
         );
+    }
+
+    /**
+     * Genera reporte de asistencias de coordinadores
+     */
+    private String generarReporteAsistencias(LocalDate fechaInicio, LocalDate fechaFin, Instalacion instalacion, String formato) {
+        List<Object[]> asistencias = asistenciaCoordinadorRepository.findAsistenciasForReport(
+            fechaInicio, fechaFin, null, null, null, null);
+
+        StringBuilder contenido = new StringBuilder();
+
+        if (formato.equals("pdf")) {
+            contenido.append("REPORTE DE ASISTENCIAS DE COORDINADORES\n");
+            contenido.append("==========================================\n\n");
+            contenido.append("Período: ").append(fechaInicio).append(" - ").append(fechaFin).append("\n\n");
+
+            for (Object[] asistencia : asistencias) {
+                contenido.append("ID: ").append(asistencia[0]).append("\n");
+                contenido.append("Coordinador: ").append(asistencia[1]).append("\n");
+                contenido.append("Instalación: ").append(asistencia[2]).append("\n");
+                contenido.append("Fecha: ").append(asistencia[3]).append("\n");
+                contenido.append("Horario Programado: ").append(asistencia[4]).append(" - ").append(asistencia[5]).append("\n");
+                contenido.append("Hora Entrada: ").append(asistencia[6] != null ? asistencia[6] : "No registrada").append("\n");
+                contenido.append("Estado Entrada: ").append(asistencia[7] != null ? asistencia[7] : "Pendiente").append("\n");
+                contenido.append("Hora Salida: ").append(asistencia[8] != null ? asistencia[8] : "No registrada").append("\n");
+                contenido.append("Estado Salida: ").append(asistencia[9] != null ? asistencia[9] : "Pendiente").append("\n");
+                contenido.append("Ubicación: ").append(asistencia[10] != null ? asistencia[10] : "No registrada").append("\n");
+                contenido.append("------------------\n\n");
+            }
+        } else {
+            // Formato CSV (aunque ya no se usa, mantenemos compatibilidad)
+            contenido.append("ID,Coordinador,Instalación,Fecha,Hora Programada Inicio,Hora Programada Fin,Hora Entrada,Estado Entrada,Hora Salida,Estado Salida,Ubicación\n");
+
+            for (Object[] asistencia : asistencias) {
+                for (int i = 0; i < asistencia.length; i++) {
+                    if (i > 0) contenido.append(",");
+                    Object valor = asistencia[i];
+                    if (valor != null) {
+                        String valorStr = valor.toString().replace(",", ";");
+                        contenido.append("\"").append(valorStr).append("\"");
+                    } else {
+                        contenido.append("\"\"");
+                    }
+                }
+                contenido.append("\n");
+            }
+        }
+
+        return contenido.toString();
+    }
+
+    /**
+     * Genera una ruta de archivo única para evitar conflictos con archivos en uso
+     */
+    private String generarRutaArchivoUnica(String rutaOriginal) {
+        File archivo = new File(rutaOriginal);
+
+        // Si el archivo no existe, usar la ruta original
+        if (!archivo.exists()) {
+            return rutaOriginal;
+        }
+
+        // Si el archivo existe, verificar si está en uso
+        if (!isFileInUse(archivo)) {
+            // Si no está en uso, intentar eliminarlo para usar el mismo nombre
+            try {
+                if (archivo.delete()) {
+                    System.out.println("Archivo anterior eliminado: " + rutaOriginal);
+                    return rutaOriginal;
+                }
+            } catch (Exception e) {
+                System.out.println("No se pudo eliminar el archivo anterior: " + e.getMessage());
+            }
+        }
+
+        // Si está en uso o no se pudo eliminar, generar un nombre único
+        String directorio = archivo.getParent();
+        String nombreSinExtension = archivo.getName().substring(0, archivo.getName().lastIndexOf('.'));
+        String extension = archivo.getName().substring(archivo.getName().lastIndexOf('.'));
+
+        int contador = 1;
+        String nuevaRuta;
+        do {
+            String nuevoNombre = nombreSinExtension + "_(" + contador + ")" + extension;
+            nuevaRuta = directorio + File.separator + nuevoNombre;
+            contador++;
+        } while (new File(nuevaRuta).exists() && isFileInUse(new File(nuevaRuta)));
+
+        System.out.println("Generando archivo con nombre único: " + nuevaRuta);
+        return nuevaRuta;
+    }
+
+    /**
+     * Verifica si un archivo está siendo usado por otro proceso
+     */
+    private boolean isFileInUse(File archivo) {
+        if (!archivo.exists()) {
+            return false;
+        }
+
+        try {
+            // Intentar renombrar el archivo temporalmente
+            File tempFile = new File(archivo.getAbsolutePath() + ".tmp");
+            boolean renamed = archivo.renameTo(tempFile);
+            if (renamed) {
+                // Si se pudo renombrar, restaurar el nombre original
+                tempFile.renameTo(archivo);
+                return false;
+            } else {
+                return true;
+            }
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    /**
+     * Limpia archivos de reportes antiguos (más de 7 días)
+     */
+    private void limpiarArchivosAntiguos() {
+        try {
+            File directorio = new File(reportesDirectorio);
+            if (!directorio.exists()) {
+                return;
+            }
+
+            long tiempoLimite = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L); // 7 días
+            File[] archivos = directorio.listFiles();
+
+            if (archivos != null) {
+                int archivosEliminados = 0;
+                for (File archivo : archivos) {
+                    if (archivo.isFile() && archivo.lastModified() < tiempoLimite) {
+                        if (!isFileInUse(archivo)) {
+                            if (archivo.delete()) {
+                                archivosEliminados++;
+                                System.out.println("Archivo antiguo eliminado: " + archivo.getName());
+                            }
+                        }
+                    }
+                }
+                if (archivosEliminados > 0) {
+                    System.out.println("Se eliminaron " + archivosEliminados + " archivos antiguos");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error al limpiar archivos antiguos: " + e.getMessage());
+        }
     }
 }
 
