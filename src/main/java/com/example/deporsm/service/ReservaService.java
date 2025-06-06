@@ -10,6 +10,7 @@ import com.example.deporsm.repository.InstalacionRepository;
 import com.example.deporsm.repository.PagoRepository;
 import com.example.deporsm.repository.ReservaRepository;
 import com.example.deporsm.repository.UsuarioRepository;
+import com.example.deporsm.util.ConfiguracionSistemaUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -176,8 +177,7 @@ public class ReservaService {
      * @param email Email del usuario
      * @param motivo Motivo de la cancelación (opcional)
      * @throws RuntimeException si no se encuentra la reserva o si no pertenece al usuario
-     */
-    @Transactional
+     */    @Transactional
     public void cancelarReserva(Integer reservaId, String email, String motivo) {
         // Verificar que el usuario existe
         Usuario usuario = usuarioRepository.findByEmail(email)
@@ -209,6 +209,15 @@ public class ReservaService {
         // Verificar que la reserva no esté ya cancelada
         if ("cancelada".equals(reserva.getEstado())) {
             throw new RuntimeException("La reserva ya está cancelada");
+        }
+        
+        // Si no es admin o coordinador, verificar límite de tiempo para cancelación
+        if (esPropietario && !esAdmin && !esCoordinador) {
+            boolean dentroDelLimite = verificarLimiteCancelacion(reserva);
+            if (!dentroDelLimite) {
+                throw new RuntimeException("No se puede cancelar la reserva. Excediste el límite de tiempo para cancelación (" + 
+                                         ConfiguracionSistemaUtil.getLimiteTiempoCancelacion() + " horas)");
+            }
         }
 
         // Actualizar el estado de la reserva
@@ -509,5 +518,33 @@ public class ReservaService {
             System.err.println("[ERROR] Error al convertir tiempo: " + timeStr + " - " + e.getMessage());
             throw new RuntimeException("Formato de tiempo inválido: " + timeStr + ". Use formato HH:MM o HH:MM:SS");
         }
+    }
+    /**
+     * Verifica si la reserva está dentro del límite de tiempo para ser cancelada.
+     * Utiliza la configuración general del sistema para determinar el límite de horas.
+     * 
+     * @param reserva La reserva a verificar
+     * @return true si está dentro del límite de tiempo, false en caso contrario
+     */
+    private boolean verificarLimiteCancelacion(Reserva reserva) {
+        // Obtener el límite de horas desde la configuración general
+        int horasLimite = ConfiguracionSistemaUtil.getLimiteTiempoCancelacion();
+        
+        // Obtener la fecha y hora actual
+        java.time.LocalDateTime ahora = java.time.LocalDateTime.now();
+        
+        // Obtener la fecha y hora de la reserva
+        java.time.LocalDate fechaReserva = reserva.getFecha().toLocalDate();
+        java.time.LocalTime horaInicio = reserva.getHoraInicio().toLocalTime();
+        java.time.LocalDateTime fechaHoraReserva = java.time.LocalDateTime.of(fechaReserva, horaInicio);
+        
+        // Calcular la diferencia en horas
+        long horasHastaReserva = java.time.Duration.between(ahora, fechaHoraReserva).toHours();
+        
+        System.out.println("Horas hasta la reserva: " + horasHastaReserva);
+        System.out.println("Límite de horas para cancelar: " + horasLimite);
+        
+        // Verificar si está dentro del límite (puede cancelar si faltan más horas que el límite)
+        return horasHastaReserva >= horasLimite;
     }
 }
