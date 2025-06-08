@@ -416,4 +416,16 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
         END
     """, nativeQuery = true)
     List<Map<String, Object>> findReservationsByStatus();
+
+    /**
+     * Busca reservas confirmadas cuya fecha y hora de fin ya hayan pasado
+     * para marcarlas como completadas automáticamente
+     */
+    @Query("SELECT r FROM Reserva r WHERE r.estado = 'confirmada' " +
+           "AND (r.fecha < :fechaActual OR " +
+           "(r.fecha = :fechaActual AND r.horaFin <= :horaActual))")
+    List<Reserva> findReservasConfirmadasVencidas(
+        @Param("fechaActual") java.sql.Date fechaActual,
+        @Param("horaActual") java.sql.Time horaActual
+    );
 }

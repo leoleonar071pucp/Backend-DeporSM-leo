@@ -14,12 +14,15 @@ import com.example.deporsm.util.ConfiguracionSistemaUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import java.util.List;
 
@@ -534,10 +537,61 @@ public class ReservaService {
             throw new RuntimeException("Formato de tiempo inválido: " + timeStr + ". Use formato HH:MM o HH:MM:SS");
         }
     }
+
+    /**
+     * Tarea programada para actualizar automáticamente el estado de las reservas confirmadas
+     * que ya han pasado su fecha y hora de fin a estado "completada"
+     * Se ejecuta cada 1 minuto
+     */
+    @Scheduled(fixedRate = 60000) // 1 minuto = 60,000 ms
+    @Transactional
+    public void actualizarReservasCompletadas() {
+        try {
+            System.out.println("\n=== INICIANDO ACTUALIZACIÓN AUTOMÁTICA DE RESERVAS ===");
+            System.out.println("Fecha/hora actual: " + LocalDateTime.now());
+
+            // Obtener la fecha y hora actual en la zona horaria de Lima
+            LocalDateTime ahora = LocalDateTime.now(ZoneId.of("America/Lima"));
+
+            // Buscar reservas confirmadas cuya fecha y hora de fin ya hayan pasado
+            List<Reserva> reservasConfirmadas = reservaRepository.findReservasConfirmadasVencidas(
+                java.sql.Date.valueOf(ahora.toLocalDate()),
+                java.sql.Time.valueOf(ahora.toLocalTime())
+            );
+
+            System.out.println("Reservas confirmadas vencidas encontradas: " + reservasConfirmadas.size());
+
+            int actualizadas = 0;
+            for (Reserva reserva : reservasConfirmadas) {
+                try {
+                    // Cambiar estado a completada
+                    reserva.setEstado("completada");
+                    reservaRepository.save(reserva);
+
+                    System.out.println("Reserva ID " + reserva.getId() + " actualizada a completada - " +
+                                     "Instalación: " + reserva.getInstalacion().getNombre() +
+                                     ", Fecha: " + reserva.getFecha() +
+                                     ", Hora fin: " + reserva.getHoraFin());
+
+                    actualizadas++;
+                } catch (Exception e) {
+                    System.err.println("Error al actualizar reserva ID " + reserva.getId() + ": " + e.getMessage());
+                }
+            }
+
+            System.out.println("Reservas actualizadas a completadas: " + actualizadas);
+            System.out.println("Actualización automática de reservas completada: " + LocalDateTime.now());
+            System.out.println("=== FIN DE ACTUALIZACIÓN AUTOMÁTICA DE RESERVAS ===\n");
+        } catch (Exception e) {
+            System.err.println("ERROR AL ACTUALIZAR ESTADOS DE RESERVAS: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     /**
      * Verifica si la reserva está dentro del límite de tiempo para ser cancelada.
      * Utiliza la configuración general del sistema para determinar el límite de horas.
-     * 
+     *
      * @param reserva La reserva a verificar
      * @return true si está dentro del límite de tiempo, false en caso contrario
      */
