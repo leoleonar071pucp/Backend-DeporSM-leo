@@ -44,8 +44,8 @@ public class Reporte {
     @Column(name = "descripcion", columnDefinition = "TEXT")
     private String descripcion;
 
-    @Column(name = "ruta_archivo", nullable = false)
-    private String rutaArchivo;
+    @Column(name = "url_archivo", nullable = false)
+    private String urlArchivo;
 
     @ManyToOne
     @JoinColumn(name = "instalacion_id")
@@ -58,7 +58,7 @@ public class Reporte {
     // Constructor con parámetros
     public Reporte(String nombre, String tipo, String formato, String rangoFechas,
                   LocalDateTime fechaCreacion, Usuario usuario, String tamano,
-                  String descripcion, String rutaArchivo, Instalacion instalacion) {
+                  String descripcion, String urlArchivo, Instalacion instalacion) {
         this.nombre = nombre;
         this.tipo = tipo;
         this.formato = formato;
@@ -67,7 +67,7 @@ public class Reporte {
         this.usuario = usuario;
         this.tamano = tamano;
         this.descripcion = descripcion;
-        this.rutaArchivo = rutaArchivo;
+        this.urlArchivo = urlArchivo;
         this.instalacion = instalacion;
     }
 }

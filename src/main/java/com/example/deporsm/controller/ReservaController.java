@@ -88,7 +88,9 @@ public class ReservaController {
     @GetMapping("/admin/filtrar")
     public ResponseEntity<?> filtrarReservasParaAdmin(
             @RequestParam(required = false) String texto,
-            @RequestParam(required = false) String fecha) {
+            @RequestParam(required = false) String fecha,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -98,18 +100,45 @@ public class ReservaController {
         }
 
         try {
-            java.sql.Date fechaSql = null;
-            if (fecha != null && !fecha.isEmpty()) {
-                try {
-                    fechaSql = java.sql.Date.valueOf(fecha);
-                } catch (IllegalArgumentException e) {
-                    return ResponseEntity.badRequest().body("Formato de fecha inválido. Use YYYY-MM-DD");
-                }
-            }
+            // Si se proporciona un rango de fechas, usar el nuevo método
+            if ((fechaInicio != null && !fechaInicio.isEmpty()) || (fechaFin != null && !fechaFin.isEmpty())) {
+                java.sql.Date fechaInicioSql = null;
+                java.sql.Date fechaFinSql = null;
 
-            List<Object[]> resultados = reservaRepository.filtrarReservasNative(texto, fechaSql);
-            List<ReservaListDTO> reservas = convertirResultadosADTO(resultados);
-            return ResponseEntity.ok(reservas);
+                if (fechaInicio != null && !fechaInicio.isEmpty()) {
+                    try {
+                        fechaInicioSql = java.sql.Date.valueOf(fechaInicio);
+                    } catch (IllegalArgumentException e) {
+                        return ResponseEntity.badRequest().body("Formato de fecha inicio inválido. Use YYYY-MM-DD");
+                    }
+                }
+
+                if (fechaFin != null && !fechaFin.isEmpty()) {
+                    try {
+                        fechaFinSql = java.sql.Date.valueOf(fechaFin);
+                    } catch (IllegalArgumentException e) {
+                        return ResponseEntity.badRequest().body("Formato de fecha fin inválido. Use YYYY-MM-DD");
+                    }
+                }
+
+                List<Object[]> resultados = reservaRepository.filtrarReservasPorRangoNative(texto, fechaInicioSql, fechaFinSql);
+                List<ReservaListDTO> reservas = convertirResultadosADTO(resultados);
+                return ResponseEntity.ok(reservas);
+            } else {
+                // Mantener compatibilidad con filtro de fecha única
+                java.sql.Date fechaSql = null;
+                if (fecha != null && !fecha.isEmpty()) {
+                    try {
+                        fechaSql = java.sql.Date.valueOf(fecha);
+                    } catch (IllegalArgumentException e) {
+                        return ResponseEntity.badRequest().body("Formato de fecha inválido. Use YYYY-MM-DD");
+                    }
+                }
+
+                List<Object[]> resultados = reservaRepository.filtrarReservasNative(texto, fechaSql);
+                List<ReservaListDTO> reservas = convertirResultadosADTO(resultados);
+                return ResponseEntity.ok(reservas);
+            }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error al filtrar reservas: " + e.getMessage());
         }

@@ -236,6 +236,21 @@ public class ReservaService {
             System.out.println("Cancelando reserva como admin/coordinador. Estado de pago cambiado a: fallido");
         }
 
+        // Liberar cualquier bloqueo temporal que pueda existir para este horario específico
+        // Esto permite que otros usuarios puedan reservar inmediatamente después de la cancelación
+        try {
+            bloqueoTemporalService.liberarBloqueosPorHorario(
+                    reserva.getInstalacion().getId(),
+                    reserva.getFecha(),
+                    reserva.getHoraInicio(),
+                    reserva.getHoraFin()
+            );
+            System.out.println("Bloqueos temporales liberados para el horario de la reserva cancelada");
+        } catch (Exception e) {
+            System.err.println("Error al liberar bloqueos temporales después de cancelar reserva: " + e.getMessage());
+            // No interrumpir el proceso de cancelación aunque falle la liberación de bloqueos
+        }
+
         // Guardar la reserva actualizada
         reservaRepository.save(reserva);
 

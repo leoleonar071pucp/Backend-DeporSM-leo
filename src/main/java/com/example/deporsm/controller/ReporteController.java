@@ -96,77 +96,34 @@ public class ReporteController {
                     .body(Map.of("error", "Reporte no encontrado: " + e.getMessage()));
             }
 
-            // Obtener el archivo
-            Resource resource;
+            // Obtener la URL del archivo desde Supabase
+            String urlArchivo;
             try {
-                resource = reporteService.obtenerArchivoReporte(id);
-                System.out.println("Recurso obtenido: " + (resource != null ? "OK" : "NULL"));
+                urlArchivo = reporteService.obtenerUrlArchivoReporte(id);
+                System.out.println("URL del archivo obtenida: " + urlArchivo);
             } catch (Exception e) {
-                System.err.println("Error al obtener archivo de reporte: " + e.getMessage());
+                System.err.println("Error al obtener URL del archivo: " + e.getMessage());
                 e.printStackTrace();
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error al obtener archivo: " + e.getMessage()));
+                    .body(Map.of("error", "Error al obtener URL del archivo: " + e.getMessage()));
             }
 
-            if (resource == null) {
-                System.err.println("El recurso es NULL");
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "El archivo del reporte no existe"));
+            // Verificar que la URL existe
+            if (urlArchivo == null || urlArchivo.isEmpty()) {
+                System.err.println("La URL del archivo es nula o vacía");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "URL del archivo no encontrada"));
             }
 
-            // Determinar el tipo de contenido
-            String contentType;
-            if (reporte.getFormato().equals("excel")) {
-                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            } else {
-                contentType = "application/pdf";
-            }
+            // Retornar la URL para redirección en el frontend
+            Map<String, Object> response = new HashMap<>();
+            response.put("url", urlArchivo);
+            response.put("nombre", reporte.getNombre());
+            response.put("formato", reporte.getFormato());
 
-            // Verificar que el archivo existe y es legible
-            try {
-                if (!resource.exists()) {
-                    System.err.println("El archivo no existe: " + resource.getFilename());
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(Map.of("error", "El archivo no existe",
-                                    "ruta", resource.getFilename()));
-                }
+            System.out.println("Enviando URL de descarga: " + urlArchivo);
 
-                if (!resource.isReadable()) {
-                    System.err.println("El archivo no es legible: " + resource.getFilename());
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(Map.of("error", "El archivo no es legible",
-                                    "ruta", resource.getFilename()));
-                }
-            } catch (Exception e) {
-                System.err.println("Error al verificar archivo: " + e.getMessage());
-                e.printStackTrace();
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error al verificar archivo: " + e.getMessage()));
-            }
-
-            // Imprimir información de depuración
-            System.out.println("Descargando reporte: " + reporte.getNombre());
-            System.out.println("Ruta del archivo: " + resource.getFilename());
-            System.out.println("Formato: " + reporte.getFormato());
-            System.out.println("Content-Type: " + contentType);
-
-            try {
-                // Crear la respuesta
-                // Crear un nombre de archivo más amigable con timestamp
-                String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-                String filename = reporte.getNombre().replaceAll("[^a-zA-Z0-9\\s]", "_") + "_" + timestamp + "." + (reporte.getFormato().equals("excel") ? "xlsx" : "pdf");
-                System.out.println("Nombre de archivo para descarga: " + filename);
-
-                return ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(contentType))
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                        .body(resource);
-            } catch (Exception e) {
-                System.err.println("Error al crear respuesta: " + e.getMessage());
-                e.printStackTrace();
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error al crear respuesta: " + e.getMessage()));
-            }
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             System.err.println("Error general en descargarReporte: " + e.getMessage());
             e.printStackTrace();

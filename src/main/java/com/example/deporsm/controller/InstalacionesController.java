@@ -115,17 +115,52 @@ public class InstalacionesController {
             inst.setContactoNumero(actualizada.getContactoNumero());
             inst.setImagenUrl(actualizada.getImagenUrl());
             inst.setActivo(actualizada.getActivo());
+
+            // Actualizar coordenadas y radio de validación
+            inst.setLatitud(actualizada.getLatitud());
+            inst.setLongitud(actualizada.getLongitud());
+            inst.setRadioValidacion(actualizada.getRadioValidacion());
+
+            // Actualizar precio
+            inst.setPrecio(actualizada.getPrecio());
+
+            // Actualizar timestamp de modificación
+            inst.setUpdatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
+
             return ResponseEntity.ok(repository.save(inst));
         }).orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
-        if (repository.existsById(id)) {
+    public ResponseEntity<?> eliminar(@PathVariable Integer id) {
+        if (!repository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            // Verificar si la instalación está asignada a coordinadores
+            List<CoordinadorInstalacion> asignaciones = coordinadorInstalacionRepository.findByInstalacionId(id);
+
+            if (!asignaciones.isEmpty()) {
+                // Obtener nombres de los coordinadores asignados
+                List<String> coordinadores = asignaciones.stream()
+                    .map(asignacion -> asignacion.getUsuario().getNombre() + " " + asignacion.getUsuario().getApellidos())
+                    .collect(Collectors.toList());
+
+                String mensaje = "No se puede eliminar la instalación porque está asignada a los siguientes coordinadores: " +
+                               String.join(", ", coordinadores) +
+                               ". Primero debe desasignar la instalación de estos coordinadores.";
+
+                return ResponseEntity.badRequest().body(mensaje);
+            }
+
+            // Si no hay asignaciones, proceder con la eliminación
             repository.deleteById(id);
             return ResponseEntity.noContent().build();
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error al eliminar instalación: " + e.getMessage());
         }
-        return ResponseEntity.notFound().build();
     }
 
     /**

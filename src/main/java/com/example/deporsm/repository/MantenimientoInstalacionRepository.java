@@ -90,11 +90,13 @@ public interface MantenimientoInstalacionRepository extends JpaRepository<Manten
 
     /**
      * Consulta para obtener datos de mantenimientos para reportes
+     * Filtra por fecha de inicio del mantenimiento para mostrar mantenimientos en el período seleccionado
      */
     @Query(value = """
     SELECT
         m.id,
         i.nombre as instalacion,
+        m.tipo,
         m.descripcion,
         DATE_FORMAT(m.fecha_inicio, '%d/%m/%Y %H:%i') as fecha_inicio,
         DATE_FORMAT(m.fecha_fin, '%d/%m/%Y %H:%i') as fecha_fin,

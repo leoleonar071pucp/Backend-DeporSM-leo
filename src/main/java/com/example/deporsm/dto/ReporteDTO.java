@@ -15,7 +15,7 @@ public class ReporteDTO {
     private String creadoPor;
     private String tamano;
     private String descripcion;
-    private String rutaArchivo;
+    private String urlArchivo;
     private Integer instalacionId; // Opcional, si el reporte es específico para una instalación
 
     public ReporteDTO() {
@@ -23,7 +23,7 @@ public class ReporteDTO {
 
     public ReporteDTO(Integer id, String nombre, String tipo, String formato, String rangoFechas,
                      LocalDateTime fechaCreacion, String creadoPor, String tamano, String descripcion,
-                     String rutaArchivo, Integer instalacionId) {
+                     String urlArchivo, Integer instalacionId) {
         this.id = id;
         this.nombre = nombre;
         this.tipo = tipo;
@@ -33,7 +33,7 @@ public class ReporteDTO {
         this.creadoPor = creadoPor;
         this.tamano = tamano;
         this.descripcion = descripcion;
-        this.rutaArchivo = rutaArchivo;
+        this.urlArchivo = urlArchivo;
         this.instalacionId = instalacionId;
     }
 
@@ -110,12 +110,12 @@ public class ReporteDTO {
         this.descripcion = descripcion;
     }
 
-    public String getRutaArchivo() {
-        return rutaArchivo;
+    public String getUrlArchivo() {
+        return urlArchivo;
     }
 
-    public void setRutaArchivo(String rutaArchivo) {
-        this.rutaArchivo = rutaArchivo;
+    public void setUrlArchivo(String urlArchivo) {
+        this.urlArchivo = urlArchivo;
     }
 
     public Integer getInstalacionId() {

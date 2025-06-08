@@ -196,6 +196,29 @@ public class BloqueoTemporalService {
     }
 
     /**
+     * Libera bloqueos temporales para un horario específico de una instalación
+     * Útil cuando se cancela una reserva para liberar el horario inmediatamente
+     */
+    @Transactional
+    public void liberarBloqueosPorHorario(Integer instalacionId, Date fecha, Time horaInicio, Time horaFin) {
+        try {
+            Timestamp ahora = new Timestamp(System.currentTimeMillis());
+            List<BloqueoTemporal> bloqueos = bloqueoTemporalRepository.findActiveBlocksForTimeSlot(
+                    instalacionId, fecha, horaInicio, horaFin, ahora);
+
+            for (BloqueoTemporal bloqueo : bloqueos) {
+                bloqueoTemporalRepository.delete(bloqueo);
+                System.out.println("Bloqueo temporal liberado para horario específico. Token: " + bloqueo.getToken());
+            }
+
+            System.out.println("Se liberaron " + bloqueos.size() + " bloqueos temporales para el horario especificado");
+        } catch (Exception e) {
+            System.err.println("Error al liberar bloqueos temporales por horario: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Tarea programada para eliminar bloqueos expirados cada minuto
      */
     @Scheduled(fixedRate = 60000) // Ejecutar cada minuto

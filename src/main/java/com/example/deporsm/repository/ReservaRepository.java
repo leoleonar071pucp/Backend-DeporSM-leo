@@ -57,7 +57,33 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     AND (:fecha IS NULL OR r.fecha = :fecha)
     ORDER BY r.fecha DESC, r.hora_inicio DESC
     """, nativeQuery = true)
-    List<Object[]> filtrarReservasNative(@Param("texto") String texto, @Param("fecha") java.sql.Date fecha);    // Método para buscar reservas por el DNI del usuario
+    List<Object[]> filtrarReservasNative(@Param("texto") String texto, @Param("fecha") java.sql.Date fecha);
+
+    // Método para filtrar reservas por texto y rango de fechas
+    @Query(value = """
+    SELECT
+        r.id,
+        CONCAT(u.nombre, ' ', u.apellidos) AS usuarioNombre,
+        i.nombre AS instalacionNombre,
+        i.ubicacion AS instalacionUbicacion,
+        r.metodo_pago AS metodoPago,
+        i.imagen_url AS instalacionImagenUrl,
+        r.fecha,
+        r.hora_inicio AS horaInicio,
+        r.hora_fin AS horaFin,
+        r.estado,
+        r.estado_pago AS estadoPago
+    FROM reservas r
+    JOIN usuarios u ON r.usuario_id = u.id
+    JOIN instalaciones i ON r.instalacion_id = i.id
+    WHERE (:texto IS NULL OR
+        LOWER(CONCAT(u.nombre, ' ', u.apellidos)) LIKE LOWER(CONCAT('%', :texto, '%')) OR
+        LOWER(i.nombre) LIKE LOWER(CONCAT('%', :texto, '%')))
+    AND (:fechaInicio IS NULL OR r.fecha >= :fechaInicio)
+    AND (:fechaFin IS NULL OR r.fecha <= :fechaFin)
+    ORDER BY r.fecha DESC, r.hora_inicio DESC
+    """, nativeQuery = true)
+    List<Object[]> filtrarReservasPorRangoNative(@Param("texto") String texto, @Param("fechaInicio") java.sql.Date fechaInicio, @Param("fechaFin") java.sql.Date fechaFin);    // Método para buscar reservas por el DNI del usuario
     @Query("SELECT r FROM Reserva r JOIN r.usuario u WHERE u.dni = :dni")
     List<Reserva> findByUsuario_Dni(@Param("dni") String dni);
 
@@ -145,7 +171,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
 
     /**
      * Consulta para obtener datos de reservas para reportes
-     * Filtra por fecha de creación (created_at) en lugar de fecha de reserva
+     * Filtra por fecha de reserva (fecha) para mostrar reservas en el período seleccionado
      */
     @Query(value = """
     SELECT
@@ -161,7 +187,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     FROM reservas r
     JOIN usuarios u ON r.usuario_id = u.id
     JOIN instalaciones i ON r.instalacion_id = i.id
-    WHERE DATE(r.created_at) BETWEEN :fechaInicio AND :fechaFin
+    WHERE r.fecha BETWEEN :fechaInicio AND :fechaFin
     AND (:instalacionId IS NULL OR r.instalacion_id = :instalacionId)
     ORDER BY r.id ASC
     """, nativeQuery = true)
@@ -172,7 +198,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
 
     /**
      * Consulta para obtener datos de ingresos para reportes
-     * Filtra por fecha de creación (created_at) en lugar de fecha de reserva
+     * Usa la fecha de los pagos (tabla pagos) para mostrar ingresos reales del período
+     * Solo cuenta pagos efectivos (estado = 'pagado'), los reembolsados no se incluyen
      */
     @Query(value = """
     SELECT
@@ -182,16 +209,20 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
         total_ingresos
     FROM (
         SELECT
-            DATE(r.created_at) as fecha_agrupada,
+            DATE(p.updated_at) as fecha_agrupada,
             i.nombre as instalacion,
-            COUNT(r.id) as total_reservas,
-            SUM(TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60) as total_ingresos
-        FROM reservas r
+            -- Contar solo reservas pagadas (reservas efectivas)
+            SUM(CASE WHEN p.estado = 'pagado' THEN 1 ELSE 0 END) as total_reservas,
+            -- Sumar solo los pagos efectivos (no reembolsados)
+            SUM(CASE WHEN p.estado = 'pagado' THEN p.monto ELSE 0 END) as total_ingresos
+        FROM pagos p
+        JOIN reservas r ON p.reserva_id = r.id
         JOIN instalaciones i ON r.instalacion_id = i.id
-        WHERE DATE(r.created_at) BETWEEN :fechaInicio AND :fechaFin
-        AND r.estado_pago = 'pagado'
+        WHERE DATE(p.updated_at) BETWEEN :fechaInicio AND :fechaFin
+        AND p.estado IN ('pagado', 'reembolsado')
         AND (:instalacionId IS NULL OR r.instalacion_id = :instalacionId)
-        GROUP BY DATE(r.created_at), i.id, i.nombre
+        GROUP BY DATE(p.updated_at), i.id, i.nombre
+        HAVING total_reservas > 0 OR total_ingresos > 0
     ) AS subquery
     ORDER BY fecha_agrupada ASC
     """, nativeQuery = true)
@@ -202,41 +233,36 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
 
     /**
      * Consulta para obtener datos de uso de instalaciones para reportes
-     * Filtra por fecha de creación (created_at) en lugar de fecha de reserva
+     * Filtra por fecha de creación de la reserva para mostrar actividad de reservas del período
+     * Solo cuenta reservas efectivamente pagadas
      */
     @Query(value = """
     SELECT
         i.nombre as instalacion,
-        COUNT(r.id) as total_reservas,
-        SUM(TIMESTAMPDIFF(HOUR, r.hora_inicio, r.hora_fin)) as horas_reservadas,
-        ROUND(
-            CASE
-                WHEN (SELECT SUM(TIMESTAMPDIFF(MINUTE, hd.hora_inicio, hd.hora_fin))
-                     FROM horarios_disponibles hd
-                     WHERE hd.instalacion_id = i.id) > 0
-                THEN
-                    (COALESCE(SUM(TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin)), 0) /
-                    (DATEDIFF(:fechaFin, :fechaInicio) + 1) /
-                    (SELECT SUM(TIMESTAMPDIFF(MINUTE, hd.hora_inicio, hd.hora_fin))
-                     FROM horarios_disponibles hd
-                     WHERE hd.instalacion_id = i.id) * 100)
-                ELSE 0
-            END, 2) as porcentaje_ocupacion,
+        COUNT(p.id) as total_reservas,
+        SUM(TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin)) / 60.0 as horas_reservadas,
+        SUM(p.monto) as ingresos_generados,
         (SELECT horario FROM (
             SELECT
                 CONCAT(TIME_FORMAT(r2.hora_inicio, '%H:%i'), ' - ', TIME_FORMAT(r2.hora_fin, '%H:%i')) as horario,
                 COUNT(*) as total
             FROM reservas r2
+            JOIN pagos p2 ON p2.reserva_id = r2.id
             WHERE r2.instalacion_id = i.id
             AND DATE(r2.created_at) BETWEEN :fechaInicio AND :fechaFin
+            AND p2.estado = 'pagado'
             GROUP BY horario
             ORDER BY total DESC
             LIMIT 1
          ) as subquery) as horario_mas_popular
     FROM instalaciones i
-    LEFT JOIN reservas r ON i.id = r.instalacion_id AND DATE(r.created_at) BETWEEN :fechaInicio AND :fechaFin
+    LEFT JOIN reservas r ON r.instalacion_id = i.id
+        AND DATE(r.created_at) BETWEEN :fechaInicio AND :fechaFin
+    LEFT JOIN pagos p ON p.reserva_id = r.id
+        AND p.estado = 'pagado'
     WHERE (:instalacionId IS NULL OR i.id = :instalacionId)
     GROUP BY i.id, i.nombre
+    HAVING total_reservas > 0
     ORDER BY total_reservas DESC
     """, nativeQuery = true)
     List<Object[]> findInstalacionesUsageForReport(
@@ -259,10 +285,16 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
     DailyIncome AS (
         SELECT
             r.fecha as fecha,
-            SUM(TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60) as total_ingresos
+            SUM(
+                CASE
+                    WHEN r.estado_pago = 'pagado' THEN TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60
+                    WHEN r.estado_pago = 'reembolsado' THEN -TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60
+                    ELSE 0
+                END
+            ) as total_ingresos
         FROM reservas r
         JOIN instalaciones i ON r.instalacion_id = i.id
-        WHERE r.estado_pago = 'pagado'
+        WHERE r.estado_pago IN ('pagado', 'reembolsado')
         AND r.fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
         GROUP BY r.fecha
     )
@@ -277,16 +309,22 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
 
     /**
      * Consulta para obtener datos de ingresos por instalación para el dashboard
+     * Lógica: pagado suma, reembolsado resta, pendiente/fallido no cuentan
      */
     @Query(value = """
     SELECT
         i.nombre as nombre,
-        COALESCE(SUM(CASE WHEN r.estado_pago = 'pagado'
-                         THEN TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60
-                         ELSE 0
-                    END), 0) as total_ingresos
+        COALESCE(SUM(
+            CASE
+                WHEN r.estado_pago = 'pagado' THEN TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60
+                WHEN r.estado_pago = 'reembolsado' THEN -TIMESTAMPDIFF(MINUTE, r.hora_inicio, r.hora_fin) * i.precio / 60
+                ELSE 0
+            END
+        ), 0) as total_ingresos
     FROM instalaciones i
-    LEFT JOIN reservas r ON i.id = r.instalacion_id AND r.fecha >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+    LEFT JOIN reservas r ON i.id = r.instalacion_id
+        AND r.fecha >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+        AND r.estado_pago IN ('pagado', 'reembolsado')
     GROUP BY i.id, i.nombre
     ORDER BY total_ingresos DESC
     LIMIT 5

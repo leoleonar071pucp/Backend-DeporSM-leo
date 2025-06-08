@@ -16,6 +16,7 @@ import com.itextpdf.layout.element.*;
 import com.itextpdf.layout.properties.TextAlignment;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -65,6 +66,48 @@ public class PdfReportService {
             System.err.println("Error al generar PDF: " + e.getMessage());
             e.printStackTrace();
             throw new IOException("Error al generar PDF: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Genera un PDF con diseño corporativo profesional en memoria
+     */
+    public byte[] generarPdfCorporativoEnMemoria(String tipoReporte, List<String> headers,
+                                               List<List<Object>> data, String rangoFechas) throws IOException {
+        System.out.println("=== GENERANDO PDF CORPORATIVO EN MEMORIA ===");
+        System.out.println("Tipo: " + tipoReporte);
+        System.out.println("Headers: " + headers);
+        System.out.println("Cantidad de datos: " + data.size());
+        System.out.println("Rango fechas: " + rangoFechas);
+
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdfDoc = new PdfDocument(writer);
+            Document document = new Document(pdfDoc, PageSize.A4);
+
+            // Configurar márgenes para el contenido (evitar header y footer)
+            document.setMargins(100, 50, 80, 50); // top aumentado para header más alto
+
+            // Agregar manejador de eventos para header, footer y marca de agua
+            pdfDoc.addEventHandler(PdfDocumentEvent.END_PAGE, new HeaderFooterHandler(tipoReporte));
+
+            // Solo agregar línea separadora inicial
+            agregarLineaSeparadora(document);
+
+            // Agregar contenido según el tipo de reporte
+            agregarContenidoReporte(document, data, headers);
+
+            document.close();
+
+            byte[] pdfBytes = baos.toByteArray();
+            System.out.println("PDF generado exitosamente en memoria. Tamaño: " + pdfBytes.length + " bytes");
+            return pdfBytes;
+
+        } catch (Exception e) {
+            System.err.println("Error al generar PDF en memoria: " + e.getMessage());
+            e.printStackTrace();
+            throw new IOException("Error al generar PDF en memoria: " + e.getMessage(), e);
         }
     }
 
