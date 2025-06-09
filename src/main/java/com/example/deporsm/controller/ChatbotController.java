@@ -266,8 +266,11 @@ public class ChatbotController {
                             horario.put("instalacionId", instalacion.getId());
                             horario.put("instalacionNombre", instalacion.getNombre());
                             horario.put("fecha", fechaActual.toString());
-                            horario.put("horaInicio", horarioBase.getHoraInicio().toString());
-                            horario.put("horaFin", horarioBase.getHoraFin().toString());
+                            // Formatear horas para mostrar solo HH:MM
+                            String horaInicioFormateada = horarioBase.getHoraInicio().toString().substring(0, 5);
+                            String horaFinFormateada = horarioBase.getHoraFin().toString().substring(0, 5);
+                            horario.put("horaInicio", horaInicioFormateada);
+                            horario.put("horaFin", horaFinFormateada);
                             horario.put("precio", instalacion.getPrecio());
                             horario.put("ubicacion", instalacion.getUbicacion());
                             horario.put("contacto", instalacion.getContactoNumero());
