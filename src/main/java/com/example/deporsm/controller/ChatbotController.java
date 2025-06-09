@@ -3,8 +3,10 @@ package com.example.deporsm.controller;
 import com.example.deporsm.model.Instalacion;
 import com.example.deporsm.model.Reserva;
 import com.example.deporsm.model.Usuario;
+import com.example.deporsm.model.HorarioDisponible;
 import com.example.deporsm.repository.InstalacionRepository;
 import com.example.deporsm.repository.UsuarioRepository;
+import com.example.deporsm.repository.HorarioDisponibleRepository;
 import com.example.deporsm.service.BloqueoTemporalService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +38,9 @@ public class ChatbotController {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private HorarioDisponibleRepository horarioDisponibleRepository;
 
     @Autowired
     private BloqueoTemporalService bloqueoTemporalService;
@@ -224,39 +229,51 @@ public class ChatbotController {
                 instalaciones = instalacionRepository.findAll();
             }
 
-            // Generar horarios disponibles para cada instalación
+            // Generar horarios disponibles para cada instalación usando la tabla horarios_disponibles
             List<Map<String, Object>> horariosDisponibles = new java.util.ArrayList<>();
 
             for (Instalacion instalacion : instalaciones) {
                 LocalDate fechaActual = fechaInicioConsulta;
 
                 while (!fechaActual.isAfter(fechaFinConsulta)) {
-                    // Generar horarios de 6:00 AM a 10:00 PM
-                    for (int hora = 6; hora < 22; hora++) {
-                        LocalTime horaInicio = LocalTime.of(hora, 0);
-                        LocalTime horaFin = LocalTime.of(hora + 1, 0);
+                    Date fechaSQL = Date.valueOf(fechaActual);
 
-                        // Verificar disponibilidad
-                        Date fechaSQL = Date.valueOf(fechaActual);
-                        Time inicioSQL = Time.valueOf(horaInicio);
-                        Time finSQL = Time.valueOf(horaFin);
+                    // Obtener el día de la semana
+                    String diaSemana = fechaActual.getDayOfWeek().name();
 
+                    // Buscar horarios disponibles para esta instalación y día de la semana
+                    List<HorarioDisponible> horariosBase = horarioDisponibleRepository
+                        .findByInstalacionIdAndDiaSemana(
+                            instalacion.getId(),
+                            HorarioDisponible.DiaSemana.valueOf(diaSemana)
+                        )
+                        .stream()
+                        .filter(h -> h.getDisponible() != null && h.getDisponible())
+                        .toList();
+
+                    // Para cada horario base, verificar si está realmente disponible
+                    for (HorarioDisponible horarioBase : horariosBase) {
                         boolean disponible = bloqueoTemporalService.verificarDisponibilidadHorario(
-                            instalacion.getId(), fechaSQL, inicioSQL, finSQL);
+                            instalacion.getId(),
+                            fechaSQL,
+                            horarioBase.getHoraInicio(),
+                            horarioBase.getHoraFin()
+                        );
 
                         if (disponible) {
                             Map<String, Object> horario = new HashMap<>();
                             horario.put("instalacionId", instalacion.getId());
                             horario.put("instalacionNombre", instalacion.getNombre());
                             horario.put("fecha", fechaActual.toString());
-                            horario.put("horaInicio", horaInicio.toString());
-                            horario.put("horaFin", horaFin.toString());
+                            horario.put("horaInicio", horarioBase.getHoraInicio().toString());
+                            horario.put("horaFin", horarioBase.getHoraFin().toString());
                             horario.put("precio", instalacion.getPrecio());
                             horario.put("ubicacion", instalacion.getUbicacion());
                             horario.put("contacto", instalacion.getContactoNumero());
                             horariosDisponibles.add(horario);
                         }
                     }
+
                     fechaActual = fechaActual.plusDays(1);
                 }
             }
