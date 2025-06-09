@@ -368,6 +368,28 @@ public class ChatbotController {
         return ResponseEntity.ok(response);
     }
 
+    // Endpoint de debug para verificar qué JSON está llegando
+    @PostMapping("/debug-horarios")
+    public ResponseEntity<Map<String, Object>> debugHorarios(@RequestBody Map<String, Object> parametros) {
+        Map<String, Object> response = new HashMap<>();
+
+        System.out.println("=== DEBUG COMPLETO ===");
+        System.out.println("JSON completo recibido: " + parametros);
+        System.out.println("Claves en el JSON: " + parametros.keySet());
+
+        for (Map.Entry<String, Object> entry : parametros.entrySet()) {
+            System.out.println("Clave: '" + entry.getKey() + "' -> Valor: '" + entry.getValue() + "' (Tipo: " +
+                (entry.getValue() != null ? entry.getValue().getClass().getSimpleName() : "null") + ")");
+        }
+        System.out.println("=====================");
+
+        response.put("parametrosRecibidos", parametros);
+        response.put("totalParametros", parametros.size());
+        response.put("mensaje", "Debug completado - revisa los logs del backend");
+
+        return ResponseEntity.ok(response);
+    }
+
     /**
      * Método helper para convertir días de la semana de inglés a español
      */
