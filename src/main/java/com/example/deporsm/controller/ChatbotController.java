@@ -100,8 +100,8 @@ public class ChatbotController {
     }
 
     // Crear una reserva desde el chatbot (simplificado para demostración)
-    @PostMapping("/reservar")
-    public ResponseEntity<Map<String, Object>> crearReserva(@RequestBody Map<String, Object> datos) {
+    @PostMapping("/generar-enlace-reserva")
+    public ResponseEntity<Map<String, Object>> generarEnlaceReserva(@RequestBody Map<String, Object> datos) {
         Map<String, Object> response = new HashMap<>();
 
         try {
@@ -128,13 +128,37 @@ public class ChatbotController {
                 return ResponseEntity.ok(response);
             }
 
-            // Por ahora, solo retornamos éxito sin crear la reserva real
-            // En una implementación completa, aquí se crearía la reserva usando ReservaService
+            // Generar link directo para facilitar la reserva
+            Instalacion instalacion = instalacionOpt.get();
+            Usuario usuario = usuarioOpt.get();
+
+            // Crear URLs para ambos casos: con y sin sesión
+            String linkReservaDirecto = String.format(
+                "https://frontend-depor-sm-leo-leonardo-pucps-projects.vercel.app/user/reservas?instalacion=%d&fecha=%s&horaInicio=%s&horaFin=%s&dni=%s",
+                instalacion.getId(), fecha, horaInicio, horaFin, usuarioDni
+            );
+
+            String linkLogin = String.format(
+                "https://frontend-depor-sm-leo-leonardo-pucps-projects.vercel.app/login?redirect=/user/reservas&instalacion=%d&fecha=%s&horaInicio=%s&horaFin=%s&dni=%s",
+                instalacion.getId(), fecha, horaInicio, horaFin, usuarioDni
+            );
+
+            // Generar código único para seguimiento
+            String codigoSeguimiento = "CHAT_" + System.currentTimeMillis();
+
             response.put("exito", true);
-            response.put("mensaje", "Solicitud de reserva recibida. Se procesará manualmente.");
-            response.put("reservaId", "CHAT_" + System.currentTimeMillis());
-            response.put("instalacion", instalacionOpt.get().getNombre());
-            response.put("usuario", usuarioOpt.get().getNombre());
+            response.put("tipo", "enlace_reserva");
+            response.put("mensaje", "¡Perfecto! He generado tus enlaces de reserva.");
+            response.put("instalacion", instalacion.getNombre());
+            response.put("usuario", usuario.getNombre());
+            response.put("precio", instalacion.getPrecio());
+            response.put("fecha", fecha);
+            response.put("horaInicio", horaInicio);
+            response.put("horaFin", horaFin);
+            response.put("linkReservaDirecto", linkReservaDirecto);
+            response.put("linkLogin", linkLogin);
+            response.put("codigoSeguimiento", codigoSeguimiento);
+            response.put("instrucciones", "Si ya tienes sesión iniciada, usa el primer enlace. Si no, usa el segundo que te llevará a iniciar sesión y luego a tu reserva.");
 
         } catch (Exception e) {
             response.put("exito", false);
