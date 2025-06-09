@@ -258,13 +258,25 @@ public class ChatbotController {
                         );
 
                         if (disponible) {
+                            // Calcular duración y precio usando la misma lógica que el frontend
+                            String horaInicio = horarioBase.getHoraInicio().toString();
+                            String horaFin = horarioBase.getHoraFin().toString();
+                            double horasDuracion = calcularDuracionHoras(horaInicio, horaFin);
+                            double precioTotal = calcularPrecioTotal(
+                                instalacion.getPrecio(),
+                                horaInicio,
+                                horaFin
+                            );
+
                             Map<String, Object> horario = new HashMap<>();
                             horario.put("instalacionId", instalacion.getId());
                             horario.put("instalacionNombre", instalacion.getNombre());
                             horario.put("fecha", fechaActual.toString());
-                            horario.put("horaInicio", horarioBase.getHoraInicio().toString());
-                            horario.put("horaFin", horarioBase.getHoraFin().toString());
-                            horario.put("precio", instalacion.getPrecio());
+                            horario.put("horaInicio", horaInicio);
+                            horario.put("horaFin", horaFin);
+                            horario.put("precio", precioTotal);
+                            horario.put("precioPorHora", instalacion.getPrecio());
+                            horario.put("duracionHoras", horasDuracion);
                             horario.put("ubicacion", instalacion.getUbicacion());
                             horario.put("contacto", instalacion.getContactoNumero());
                             horariosDisponibles.add(horario);
@@ -350,5 +362,44 @@ public class ChatbotController {
             default:
                 return HorarioDisponible.DiaSemana.LUNES; // Valor por defecto
         }
+    }
+
+    /**
+     * Calcula la duración en horas entre dos horarios
+     * Replica la lógica de calculateTotalPrice del frontend
+     */
+    private double calcularDuracionHoras(String horaInicio, String horaFin) {
+        // Extraer solo las horas y minutos si viene en formato "HH:MM:SS"
+        String[] startParts = horaInicio.split(":");
+        String[] endParts = horaFin.split(":");
+
+        // Convertir a minutos para facilitar el cálculo
+        int startMinutes = Integer.parseInt(startParts[0]) * 60 + Integer.parseInt(startParts[1]);
+        int endMinutes = Integer.parseInt(endParts[0]) * 60 + Integer.parseInt(endParts[1]);
+
+        // Calcular la duración en minutos
+        int durationMinutes = endMinutes - startMinutes;
+
+        // Si el tiempo final es menor que el inicial, asumimos que cruza la medianoche
+        if (durationMinutes < 0) {
+            durationMinutes += 24 * 60; // Añadir un día completo en minutos
+        }
+
+        // Convertir la duración a horas (con decimales)
+        return durationMinutes / 60.0;
+    }
+
+    /**
+     * Calcula el precio total basado en la duración de la reserva
+     * Replica exactamente la lógica de calculateTotalPrice del frontend
+     */
+    private double calcularPrecioTotal(float precioPorHora, String horaInicio, String horaFin) {
+        double duracionHoras = calcularDuracionHoras(horaInicio, horaFin);
+
+        // Calcular el precio total
+        double precioTotal = precioPorHora * duracionHoras;
+
+        // Redondear a 2 decimales (igual que en el frontend)
+        return Math.round(precioTotal * 100.0) / 100.0;
     }
 }
