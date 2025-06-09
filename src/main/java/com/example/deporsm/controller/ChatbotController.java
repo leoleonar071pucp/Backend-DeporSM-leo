@@ -173,40 +173,17 @@ public class ChatbotController {
     }
 
     // Consultar horarios disponibles de forma flexible
-    @PostMapping("/horarios-disponibles")
-    public ResponseEntity<Map<String, Object>> consultarHorariosDisponibles(@RequestBody Map<String, Object> parametros) {
+    @GetMapping("/horarios-disponibles")
+    public ResponseEntity<Map<String, Object>> consultarHorariosDisponibles(
+            @RequestParam(required = false) String instalacionNombre,
+            @RequestParam(required = false) Long instalacionId,
+            @RequestParam(required = false) String fecha,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin) {
 
         Map<String, Object> response = new HashMap<>();
 
         try {
-            // Extraer parámetros del JSON
-            String instalacionNombre = (String) parametros.get("instalacionNombre");
-            Object instalacionIdObj = parametros.get("instalacionId");
-            Long instalacionId = null;
-            if (instalacionIdObj != null) {
-                if (instalacionIdObj instanceof Number) {
-                    instalacionId = ((Number) instalacionIdObj).longValue();
-                } else if (instalacionIdObj instanceof String && !((String) instalacionIdObj).trim().isEmpty()) {
-                    try {
-                        instalacionId = Long.parseLong((String) instalacionIdObj);
-                    } catch (NumberFormatException e) {
-                        // Ignorar si no se puede parsear
-                    }
-                }
-            }
-            String fecha = (String) parametros.get("fecha");
-            String fechaInicio = (String) parametros.get("fechaInicio");
-            String fechaFin = (String) parametros.get("fechaFin");
-
-            // DEBUG: Log de parámetros recibidos
-            System.out.println("=== DEBUG HORARIOS DISPONIBLES ===");
-            System.out.println("JSON recibido: " + parametros);
-            System.out.println("instalacionNombre: '" + instalacionNombre + "'");
-            System.out.println("instalacionId: " + instalacionId);
-            System.out.println("fecha: '" + fecha + "'");
-            System.out.println("fechaInicio: '" + fechaInicio + "'");
-            System.out.println("fechaFin: '" + fechaFin + "'");
-            System.out.println("===================================");
             // Función helper para validar y parsear fechas
             LocalDate fechaInicioConsulta;
             LocalDate fechaFinConsulta;
@@ -229,7 +206,6 @@ public class ChatbotController {
 
             // Filtrar instalaciones según los parámetros
             if (instalacionId != null) {
-                System.out.println("Filtrando por instalacionId: " + instalacionId);
                 Optional<Instalacion> instalacionOpt = instalacionRepository.findById(instalacionId.intValue());
                 if (!instalacionOpt.isPresent()) {
                     response.put("exito", false);
@@ -237,24 +213,10 @@ public class ChatbotController {
                     return ResponseEntity.ok(response);
                 }
                 instalaciones = List.of(instalacionOpt.get());
-                System.out.println("Instalación encontrada: " + instalacionOpt.get().getNombre());
             } else if (instalacionNombre != null && !instalacionNombre.trim().isEmpty()) {
-                System.out.println("Filtrando por instalacionNombre: '" + instalacionNombre + "'");
-                List<Instalacion> todasInstalaciones = instalacionRepository.findAll();
-                System.out.println("Total instalaciones en BD: " + todasInstalaciones.size());
-
-                instalaciones = todasInstalaciones.stream()
-                    .filter(inst -> {
-                        boolean matches = inst.getNombre().toLowerCase().contains(instalacionNombre.toLowerCase());
-                        System.out.println("Instalación '" + inst.getNombre() + "' matches '" + instalacionNombre + "': " + matches);
-                        return matches;
-                    })
+                instalaciones = instalacionRepository.findAll().stream()
+                    .filter(inst -> inst.getNombre().toLowerCase().contains(instalacionNombre.toLowerCase()))
                     .toList();
-
-                System.out.println("Instalaciones filtradas: " + instalaciones.size());
-                for (Instalacion inst : instalaciones) {
-                    System.out.println("- " + inst.getNombre() + " (ID: " + inst.getId() + ")");
-                }
 
                 // Si no se encuentra ninguna instalación con ese nombre
                 if (instalaciones.isEmpty()) {
@@ -263,9 +225,7 @@ public class ChatbotController {
                     return ResponseEntity.ok(response);
                 }
             } else {
-                System.out.println("Sin filtros - obteniendo todas las instalaciones");
                 instalaciones = instalacionRepository.findAll();
-                System.out.println("Total instalaciones: " + instalaciones.size());
             }
 
             // Generar horarios disponibles para cada instalación usando la tabla horarios_disponibles
@@ -365,28 +325,6 @@ public class ChatbotController {
         Map<String, String> response = new HashMap<>();
         response.put("mensaje", "API Chatbot funcionando correctamente");
         response.put("timestamp", java.time.LocalDateTime.now().toString());
-        return ResponseEntity.ok(response);
-    }
-
-    // Endpoint de debug para verificar qué JSON está llegando
-    @PostMapping("/debug-horarios")
-    public ResponseEntity<Map<String, Object>> debugHorarios(@RequestBody Map<String, Object> parametros) {
-        Map<String, Object> response = new HashMap<>();
-
-        System.out.println("=== DEBUG COMPLETO ===");
-        System.out.println("JSON completo recibido: " + parametros);
-        System.out.println("Claves en el JSON: " + parametros.keySet());
-
-        for (Map.Entry<String, Object> entry : parametros.entrySet()) {
-            System.out.println("Clave: '" + entry.getKey() + "' -> Valor: '" + entry.getValue() + "' (Tipo: " +
-                (entry.getValue() != null ? entry.getValue().getClass().getSimpleName() : "null") + ")");
-        }
-        System.out.println("=====================");
-
-        response.put("parametrosRecibidos", parametros);
-        response.put("totalParametros", parametros.size());
-        response.put("mensaje", "Debug completado - revisa los logs del backend");
-
         return ResponseEntity.ok(response);
     }
 
