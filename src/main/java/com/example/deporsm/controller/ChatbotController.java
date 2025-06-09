@@ -184,6 +184,14 @@ public class ChatbotController {
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // DEBUG: Log de parámetros recibidos
+            System.out.println("=== DEBUG HORARIOS DISPONIBLES ===");
+            System.out.println("instalacionNombre: '" + instalacionNombre + "'");
+            System.out.println("instalacionId: " + instalacionId);
+            System.out.println("fecha: '" + fecha + "'");
+            System.out.println("fechaInicio: '" + fechaInicio + "'");
+            System.out.println("fechaFin: '" + fechaFin + "'");
+            System.out.println("===================================");
             // Función helper para validar y parsear fechas
             LocalDate fechaInicioConsulta;
             LocalDate fechaFinConsulta;
@@ -206,6 +214,7 @@ public class ChatbotController {
 
             // Filtrar instalaciones según los parámetros
             if (instalacionId != null) {
+                System.out.println("Filtrando por instalacionId: " + instalacionId);
                 Optional<Instalacion> instalacionOpt = instalacionRepository.findById(instalacionId.intValue());
                 if (!instalacionOpt.isPresent()) {
                     response.put("exito", false);
@@ -213,10 +222,24 @@ public class ChatbotController {
                     return ResponseEntity.ok(response);
                 }
                 instalaciones = List.of(instalacionOpt.get());
+                System.out.println("Instalación encontrada: " + instalacionOpt.get().getNombre());
             } else if (instalacionNombre != null && !instalacionNombre.trim().isEmpty()) {
-                instalaciones = instalacionRepository.findAll().stream()
-                    .filter(inst -> inst.getNombre().toLowerCase().contains(instalacionNombre.toLowerCase()))
+                System.out.println("Filtrando por instalacionNombre: '" + instalacionNombre + "'");
+                List<Instalacion> todasInstalaciones = instalacionRepository.findAll();
+                System.out.println("Total instalaciones en BD: " + todasInstalaciones.size());
+
+                instalaciones = todasInstalaciones.stream()
+                    .filter(inst -> {
+                        boolean matches = inst.getNombre().toLowerCase().contains(instalacionNombre.toLowerCase());
+                        System.out.println("Instalación '" + inst.getNombre() + "' matches '" + instalacionNombre + "': " + matches);
+                        return matches;
+                    })
                     .toList();
+
+                System.out.println("Instalaciones filtradas: " + instalaciones.size());
+                for (Instalacion inst : instalaciones) {
+                    System.out.println("- " + inst.getNombre() + " (ID: " + inst.getId() + ")");
+                }
 
                 // Si no se encuentra ninguna instalación con ese nombre
                 if (instalaciones.isEmpty()) {
@@ -225,7 +248,9 @@ public class ChatbotController {
                     return ResponseEntity.ok(response);
                 }
             } else {
+                System.out.println("Sin filtros - obteniendo todas las instalaciones");
                 instalaciones = instalacionRepository.findAll();
+                System.out.println("Total instalaciones: " + instalaciones.size());
             }
 
             // Generar horarios disponibles para cada instalación usando la tabla horarios_disponibles
