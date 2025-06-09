@@ -223,23 +223,34 @@ public class ChatbotController {
                 }
                 instalaciones = List.of(instalacionOpt.get());
                 System.out.println("Instalación encontrada por ID: " + instalacionOpt.get().getNombre());
-            } else if (instalacionNombre != null && !instalacionNombre.trim().isEmpty()) {
+            } else if (instalacionNombre != null && !instalacionNombre.trim().isEmpty() &&
+                       !instalacionNombre.equals("") && !instalacionNombre.equals("null")) {
+                System.out.println("=== FILTRO POR NOMBRE ACTIVADO ===");
                 System.out.println("Filtrando por nombre: '" + instalacionNombre + "'");
+                System.out.println("Longitud del nombre: " + instalacionNombre.length());
+
                 List<Instalacion> todasInstalaciones = instalacionRepository.findAll();
                 System.out.println("Total instalaciones en BD: " + todasInstalaciones.size());
 
                 instalaciones = todasInstalaciones.stream()
                     .filter(inst -> {
-                        boolean coincide = inst.getNombre().toLowerCase().contains(instalacionNombre.toLowerCase());
-                        System.out.println("Instalación: '" + inst.getNombre() + "' - Coincide: " + coincide);
+                        String nombreInst = inst.getNombre().toLowerCase().trim();
+                        String nombreBuscar = instalacionNombre.toLowerCase().trim();
+                        boolean coincide = nombreInst.contains(nombreBuscar);
+                        System.out.println("Comparando: '" + nombreInst + "' contiene '" + nombreBuscar + "' = " + coincide);
                         return coincide;
                     })
                     .toList();
 
+                System.out.println("=== RESULTADO FILTRO ===");
                 System.out.println("Instalaciones filtradas: " + instalaciones.size());
+                for (Instalacion inst : instalaciones) {
+                    System.out.println("- " + inst.getNombre() + " (ID: " + inst.getId() + ")");
+                }
 
                 // Si no se encuentra ninguna instalación con ese nombre
                 if (instalaciones.isEmpty()) {
+                    System.out.println("=== NO SE ENCONTRARON INSTALACIONES ===");
                     response.put("exito", false);
                     response.put("mensaje", "No se encontraron instalaciones con el nombre: " + instalacionNombre);
                     return ResponseEntity.ok(response);
