@@ -1,7 +1,6 @@
 package com.example.deporsm.controller;
 
 import com.example.deporsm.model.Instalacion;
-import com.example.deporsm.model.Reserva;
 import com.example.deporsm.model.Usuario;
 import com.example.deporsm.model.HorarioDisponible;
 import com.example.deporsm.repository.InstalacionRepository;
@@ -238,15 +237,13 @@ public class ChatbotController {
                 while (!fechaActual.isAfter(fechaFinConsulta)) {
                     Date fechaSQL = Date.valueOf(fechaActual);
 
-                    // Obtener el día de la semana
-                    String diaSemana = fechaActual.getDayOfWeek().name();
+                    // Obtener el día de la semana y convertir de inglés a español
+                    String diaSemanaIngles = fechaActual.getDayOfWeek().name();
+                    HorarioDisponible.DiaSemana diaSemana = convertirDiaSemana(diaSemanaIngles);
 
                     // Buscar horarios disponibles para esta instalación y día de la semana
                     List<HorarioDisponible> horariosBase = horarioDisponibleRepository
-                        .findByInstalacionIdAndDiaSemana(
-                            instalacion.getId(),
-                            HorarioDisponible.DiaSemana.valueOf(diaSemana)
-                        )
+                        .findByInstalacionIdAndDiaSemana(instalacion.getId(), diaSemana)
                         .stream()
                         .filter(h -> h.getDisponible() != null && h.getDisponible())
                         .toList();
@@ -329,5 +326,29 @@ public class ChatbotController {
         response.put("mensaje", "API Chatbot funcionando correctamente");
         response.put("timestamp", java.time.LocalDateTime.now().toString());
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Método helper para convertir días de la semana de inglés a español
+     */
+    private HorarioDisponible.DiaSemana convertirDiaSemana(String diaSemanaIngles) {
+        switch (diaSemanaIngles.toUpperCase()) {
+            case "MONDAY":
+                return HorarioDisponible.DiaSemana.LUNES;
+            case "TUESDAY":
+                return HorarioDisponible.DiaSemana.MARTES;
+            case "WEDNESDAY":
+                return HorarioDisponible.DiaSemana.MIERCOLES;
+            case "THURSDAY":
+                return HorarioDisponible.DiaSemana.JUEVES;
+            case "FRIDAY":
+                return HorarioDisponible.DiaSemana.VIERNES;
+            case "SATURDAY":
+                return HorarioDisponible.DiaSemana.SABADO;
+            case "SUNDAY":
+                return HorarioDisponible.DiaSemana.DOMINGO;
+            default:
+                return HorarioDisponible.DiaSemana.LUNES; // Valor por defecto
+        }
     }
 }
