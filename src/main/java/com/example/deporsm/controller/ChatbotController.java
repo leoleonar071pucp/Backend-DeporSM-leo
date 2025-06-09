@@ -1,5 +1,6 @@
 package com.example.deporsm.controller;
 
+import com.example.deporsm.dto.ChatbotHorariosRequestDTO;
 import com.example.deporsm.model.Instalacion;
 import com.example.deporsm.model.Usuario;
 import com.example.deporsm.model.HorarioDisponible;
@@ -172,18 +173,21 @@ public class ChatbotController {
         return ResponseEntity.ok(response);
     }
 
-    // Consultar horarios disponibles de forma flexible
-    @GetMapping("/horarios-disponibles")
+    // Consultar horarios disponibles - solo POST con JSON
+    @PostMapping("/horarios-disponibles")
     public ResponseEntity<Map<String, Object>> consultarHorariosDisponibles(
-            @RequestParam(required = false) String instalacionNombre,
-            @RequestParam(required = false) Long instalacionId,
-            @RequestParam(required = false) String fecha,
-            @RequestParam(required = false) String fechaInicio,
-            @RequestParam(required = false) String fechaFin) {
+            @RequestBody ChatbotHorariosRequestDTO request) {
 
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // Extraer parámetros del DTO
+            String instalacionNombre = request.getInstalacionNombre();
+            Long instalacionId = request.getInstalacionId();
+            String fecha = request.getFecha();
+            String fechaInicio = request.getFechaInicio();
+            String fechaFin = request.getFechaFin();
+
             // Función helper para validar y parsear fechas
             LocalDate fechaInicioConsulta;
             LocalDate fechaFinConsulta;
