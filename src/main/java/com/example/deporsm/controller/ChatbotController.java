@@ -173,19 +173,34 @@ public class ChatbotController {
     }
 
     // Consultar horarios disponibles de forma flexible
-    @GetMapping("/horarios-disponibles")
-    public ResponseEntity<Map<String, Object>> consultarHorariosDisponibles(
-            @RequestParam(required = false) String instalacionNombre,
-            @RequestParam(required = false) Long instalacionId,
-            @RequestParam(required = false) String fecha,
-            @RequestParam(required = false) String fechaInicio,
-            @RequestParam(required = false) String fechaFin) {
+    @PostMapping("/horarios-disponibles")
+    public ResponseEntity<Map<String, Object>> consultarHorariosDisponibles(@RequestBody Map<String, Object> parametros) {
 
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // Extraer parámetros del JSON
+            String instalacionNombre = (String) parametros.get("instalacionNombre");
+            Object instalacionIdObj = parametros.get("instalacionId");
+            Long instalacionId = null;
+            if (instalacionIdObj != null) {
+                if (instalacionIdObj instanceof Number) {
+                    instalacionId = ((Number) instalacionIdObj).longValue();
+                } else if (instalacionIdObj instanceof String && !((String) instalacionIdObj).trim().isEmpty()) {
+                    try {
+                        instalacionId = Long.parseLong((String) instalacionIdObj);
+                    } catch (NumberFormatException e) {
+                        // Ignorar si no se puede parsear
+                    }
+                }
+            }
+            String fecha = (String) parametros.get("fecha");
+            String fechaInicio = (String) parametros.get("fechaInicio");
+            String fechaFin = (String) parametros.get("fechaFin");
+
             // DEBUG: Log de parámetros recibidos
             System.out.println("=== DEBUG HORARIOS DISPONIBLES ===");
+            System.out.println("JSON recibido: " + parametros);
             System.out.println("instalacionNombre: '" + instalacionNombre + "'");
             System.out.println("instalacionId: " + instalacionId);
             System.out.println("fecha: '" + fecha + "'");
