@@ -168,6 +168,99 @@ public class ChatbotController {
         return ResponseEntity.ok(response);
     }
 
+    // Consultar horarios disponibles de forma flexible
+    @GetMapping("/horarios-disponibles")
+    public ResponseEntity<Map<String, Object>> consultarHorariosDisponibles(
+            @RequestParam(required = false) String instalacionNombre,
+            @RequestParam(required = false) Long instalacionId,
+            @RequestParam(required = false) String fecha,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            // Si no se especifica fecha, usar hoy y los próximos 7 días
+            LocalDate fechaInicioConsulta = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now();
+            LocalDate fechaFinConsulta = fechaFin != null ? LocalDate.parse(fechaFin) : fechaInicioConsulta.plusDays(7);
+
+            // Si se especifica una fecha específica, usar solo esa fecha
+            if (fecha != null) {
+                fechaInicioConsulta = LocalDate.parse(fecha);
+                fechaFinConsulta = fechaInicioConsulta;
+            }
+
+            List<Instalacion> instalaciones;
+
+            // Filtrar instalaciones según los parámetros
+            if (instalacionId != null) {
+                Optional<Instalacion> instalacionOpt = instalacionRepository.findById(instalacionId.intValue());
+                if (!instalacionOpt.isPresent()) {
+                    response.put("exito", false);
+                    response.put("mensaje", "Instalación no encontrada");
+                    return ResponseEntity.ok(response);
+                }
+                instalaciones = List.of(instalacionOpt.get());
+            } else if (instalacionNombre != null) {
+                instalaciones = instalacionRepository.findAll().stream()
+                    .filter(inst -> inst.getNombre().toLowerCase().contains(instalacionNombre.toLowerCase()))
+                    .toList();
+            } else {
+                instalaciones = instalacionRepository.findAll();
+            }
+
+            // Generar horarios disponibles para cada instalación
+            List<Map<String, Object>> horariosDisponibles = new java.util.ArrayList<>();
+
+            for (Instalacion instalacion : instalaciones) {
+                LocalDate fechaActual = fechaInicioConsulta;
+
+                while (!fechaActual.isAfter(fechaFinConsulta)) {
+                    // Generar horarios de 6:00 AM a 10:00 PM
+                    for (int hora = 6; hora < 22; hora++) {
+                        LocalTime horaInicio = LocalTime.of(hora, 0);
+                        LocalTime horaFin = LocalTime.of(hora + 1, 0);
+
+                        // Verificar disponibilidad
+                        Date fechaSQL = Date.valueOf(fechaActual);
+                        Time inicioSQL = Time.valueOf(horaInicio);
+                        Time finSQL = Time.valueOf(horaFin);
+
+                        boolean disponible = bloqueoTemporalService.verificarDisponibilidadHorario(
+                            instalacion.getId(), fechaSQL, inicioSQL, finSQL);
+
+                        if (disponible) {
+                            Map<String, Object> horario = new HashMap<>();
+                            horario.put("instalacionId", instalacion.getId());
+                            horario.put("instalacionNombre", instalacion.getNombre());
+                            horario.put("fecha", fechaActual.toString());
+                            horario.put("horaInicio", horaInicio.toString());
+                            horario.put("horaFin", horaFin.toString());
+                            horario.put("precio", instalacion.getPrecio());
+                            horario.put("ubicacion", instalacion.getUbicacion());
+                            horario.put("contacto", instalacion.getContactoNumero());
+                            horariosDisponibles.add(horario);
+                        }
+                    }
+                    fechaActual = fechaActual.plusDays(1);
+                }
+            }
+
+            response.put("exito", true);
+            response.put("horariosDisponibles", horariosDisponibles);
+            response.put("totalHorarios", horariosDisponibles.size());
+            response.put("fechaConsultaInicio", fechaInicioConsulta.toString());
+            response.put("fechaConsultaFin", fechaFinConsulta.toString());
+            response.put("mensaje", "Horarios disponibles encontrados");
+
+        } catch (Exception e) {
+            response.put("exito", false);
+            response.put("mensaje", "Error al consultar horarios: " + e.getMessage());
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
     // Obtener reservas de un usuario
     @GetMapping("/reservas/{dni}")
     public ResponseEntity<Map<String, Object>> getReservasUsuario(@PathVariable String dni) {
