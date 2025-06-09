@@ -184,6 +184,14 @@ public class ChatbotController {
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // Debug: Mostrar todos los parámetros recibidos
+            System.out.println("=== PARÁMETROS RECIBIDOS ===");
+            System.out.println("instalacionNombre: '" + instalacionNombre + "'");
+            System.out.println("instalacionId: " + instalacionId);
+            System.out.println("fecha: '" + fecha + "'");
+            System.out.println("fechaInicio: '" + fechaInicio + "'");
+            System.out.println("fechaFin: '" + fechaFin + "'");
+            System.out.println("============================");
             // Función helper para validar y parsear fechas
             LocalDate fechaInicioConsulta;
             LocalDate fechaFinConsulta;
@@ -214,9 +222,16 @@ public class ChatbotController {
                 }
                 instalaciones = List.of(instalacionOpt.get());
             } else if (instalacionNombre != null && !instalacionNombre.trim().isEmpty()) {
+                System.out.println("Filtrando por instalación: '" + instalacionNombre + "'");
                 instalaciones = instalacionRepository.findAll().stream()
-                    .filter(inst -> inst.getNombre().toLowerCase().contains(instalacionNombre.toLowerCase()))
+                    .filter(inst -> {
+                        boolean matches = inst.getNombre().toLowerCase().contains(instalacionNombre.toLowerCase());
+                        System.out.println("Instalación: " + inst.getNombre() + " - Coincide: " + matches);
+                        return matches;
+                    })
                     .toList();
+
+                System.out.println("Instalaciones encontradas: " + instalaciones.size());
 
                 // Si no se encuentra ninguna instalación con ese nombre
                 if (instalaciones.isEmpty()) {
@@ -225,6 +240,7 @@ public class ChatbotController {
                     return ResponseEntity.ok(response);
                 }
             } else {
+                System.out.println("Sin filtro de instalación - devolviendo todas");
                 instalaciones = instalacionRepository.findAll();
             }
 
