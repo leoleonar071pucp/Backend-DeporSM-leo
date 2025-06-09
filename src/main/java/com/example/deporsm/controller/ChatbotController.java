@@ -180,14 +180,22 @@ public class ChatbotController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            // Si no se especifica fecha, usar hoy y los próximos 7 días
-            LocalDate fechaInicioConsulta = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now();
-            LocalDate fechaFinConsulta = fechaFin != null ? LocalDate.parse(fechaFin) : fechaInicioConsulta.plusDays(7);
+            // Función helper para validar y parsear fechas
+            LocalDate fechaInicioConsulta;
+            LocalDate fechaFinConsulta;
 
             // Si se especifica una fecha específica, usar solo esa fecha
-            if (fecha != null) {
+            if (fecha != null && !fecha.trim().isEmpty()) {
                 fechaInicioConsulta = LocalDate.parse(fecha);
                 fechaFinConsulta = fechaInicioConsulta;
+            } else {
+                // Si no se especifica fecha específica, usar rango o por defecto
+                fechaInicioConsulta = (fechaInicio != null && !fechaInicio.trim().isEmpty())
+                    ? LocalDate.parse(fechaInicio)
+                    : LocalDate.now();
+                fechaFinConsulta = (fechaFin != null && !fechaFin.trim().isEmpty())
+                    ? LocalDate.parse(fechaFin)
+                    : fechaInicioConsulta.plusDays(7);
             }
 
             List<Instalacion> instalaciones;
@@ -201,10 +209,17 @@ public class ChatbotController {
                     return ResponseEntity.ok(response);
                 }
                 instalaciones = List.of(instalacionOpt.get());
-            } else if (instalacionNombre != null) {
+            } else if (instalacionNombre != null && !instalacionNombre.trim().isEmpty()) {
                 instalaciones = instalacionRepository.findAll().stream()
                     .filter(inst -> inst.getNombre().toLowerCase().contains(instalacionNombre.toLowerCase()))
                     .toList();
+
+                // Si no se encuentra ninguna instalación con ese nombre
+                if (instalaciones.isEmpty()) {
+                    response.put("exito", false);
+                    response.put("mensaje", "No se encontraron instalaciones con el nombre: " + instalacionNombre);
+                    return ResponseEntity.ok(response);
+                }
             } else {
                 instalaciones = instalacionRepository.findAll();
             }
