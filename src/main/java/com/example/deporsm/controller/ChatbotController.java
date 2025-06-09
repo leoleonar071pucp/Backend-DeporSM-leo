@@ -184,14 +184,6 @@ public class ChatbotController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            // Debug: Imprimir parámetros recibidos
-            System.out.println("=== CHATBOT HORARIOS DEBUG ===");
-            System.out.println("instalacionNombre recibido: '" + instalacionNombre + "'");
-            System.out.println("instalacionId recibido: " + instalacionId);
-            System.out.println("fecha recibida: '" + fecha + "'");
-            System.out.println("fechaInicio recibida: '" + fechaInicio + "'");
-            System.out.println("fechaFin recibida: '" + fechaFin + "'");
-
             // Función helper para validar y parsear fechas
             LocalDate fechaInicioConsulta;
             LocalDate fechaFinConsulta;
@@ -214,7 +206,6 @@ public class ChatbotController {
 
             // Filtrar instalaciones según los parámetros
             if (instalacionId != null) {
-                System.out.println("Filtrando por ID: " + instalacionId);
                 Optional<Instalacion> instalacionOpt = instalacionRepository.findById(instalacionId.intValue());
                 if (!instalacionOpt.isPresent()) {
                     response.put("exito", false);
@@ -222,43 +213,19 @@ public class ChatbotController {
                     return ResponseEntity.ok(response);
                 }
                 instalaciones = List.of(instalacionOpt.get());
-                System.out.println("Instalación encontrada por ID: " + instalacionOpt.get().getNombre());
-            } else if (instalacionNombre != null && !instalacionNombre.trim().isEmpty() &&
-                       !instalacionNombre.equals("") && !instalacionNombre.equals("null")) {
-                System.out.println("=== FILTRO POR NOMBRE ACTIVADO ===");
-                System.out.println("Filtrando por nombre: '" + instalacionNombre + "'");
-                System.out.println("Longitud del nombre: " + instalacionNombre.length());
-
-                List<Instalacion> todasInstalaciones = instalacionRepository.findAll();
-                System.out.println("Total instalaciones en BD: " + todasInstalaciones.size());
-
-                instalaciones = todasInstalaciones.stream()
-                    .filter(inst -> {
-                        String nombreInst = inst.getNombre().toLowerCase().trim();
-                        String nombreBuscar = instalacionNombre.toLowerCase().trim();
-                        boolean coincide = nombreInst.contains(nombreBuscar);
-                        System.out.println("Comparando: '" + nombreInst + "' contiene '" + nombreBuscar + "' = " + coincide);
-                        return coincide;
-                    })
+            } else if (instalacionNombre != null && !instalacionNombre.trim().isEmpty()) {
+                instalaciones = instalacionRepository.findAll().stream()
+                    .filter(inst -> inst.getNombre().toLowerCase().contains(instalacionNombre.toLowerCase()))
                     .toList();
-
-                System.out.println("=== RESULTADO FILTRO ===");
-                System.out.println("Instalaciones filtradas: " + instalaciones.size());
-                for (Instalacion inst : instalaciones) {
-                    System.out.println("- " + inst.getNombre() + " (ID: " + inst.getId() + ")");
-                }
 
                 // Si no se encuentra ninguna instalación con ese nombre
                 if (instalaciones.isEmpty()) {
-                    System.out.println("=== NO SE ENCONTRARON INSTALACIONES ===");
                     response.put("exito", false);
                     response.put("mensaje", "No se encontraron instalaciones con el nombre: " + instalacionNombre);
                     return ResponseEntity.ok(response);
                 }
             } else {
-                System.out.println("Sin filtros - obteniendo todas las instalaciones");
                 instalaciones = instalacionRepository.findAll();
-                System.out.println("Total instalaciones sin filtro: " + instalaciones.size());
             }
 
             // Generar horarios disponibles para cada instalación usando la tabla horarios_disponibles
@@ -291,28 +258,13 @@ public class ChatbotController {
                         );
 
                         if (disponible) {
-                            // Calcular duración en horas para el precio total
-                            LocalTime inicio = horarioBase.getHoraInicio().toLocalTime();
-                            LocalTime fin = horarioBase.getHoraFin().toLocalTime();
-                            long minutosDuracion = java.time.Duration.between(inicio, fin).toMinutes();
-                            double horasDuracion = minutosDuracion / 60.0;
-                            double precioTotal = instalacion.getPrecio() * horasDuracion;
-
-                            System.out.println("DEBUG PRECIO - Instalación: " + instalacion.getNombre() +
-                                             ", Horario: " + inicio + "-" + fin +
-                                             ", Duración: " + horasDuracion + "h" +
-                                             ", Precio/hora: " + instalacion.getPrecio() +
-                                             ", Precio total: " + precioTotal);
-
                             Map<String, Object> horario = new HashMap<>();
                             horario.put("instalacionId", instalacion.getId());
                             horario.put("instalacionNombre", instalacion.getNombre());
                             horario.put("fecha", fechaActual.toString());
                             horario.put("horaInicio", horarioBase.getHoraInicio().toString());
                             horario.put("horaFin", horarioBase.getHoraFin().toString());
-                            horario.put("precio", precioTotal);
-                            horario.put("precioPorHora", instalacion.getPrecio());
-                            horario.put("duracionHoras", horasDuracion);
+                            horario.put("precio", instalacion.getPrecio());
                             horario.put("ubicacion", instalacion.getUbicacion());
                             horario.put("contacto", instalacion.getContactoNumero());
                             horariosDisponibles.add(horario);
