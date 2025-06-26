@@ -41,6 +41,7 @@ public class InstalacionesController {
     private final HorarioDisponibleRepository horarioDisponibleRepository;
     private final CoordinadorInstalacionRepository coordinadorInstalacionRepository;
     private final MantenimientoInstalacionRepository mantenimientoRepository;
+    private final ReservaRepository reservaRepository;
     private final BloqueoTemporalService bloqueoTemporalService;
 
     public InstalacionesController(
@@ -51,6 +52,7 @@ public class InstalacionesController {
             HorarioDisponibleRepository horarioDisponibleRepository,
             CoordinadorInstalacionRepository coordinadorInstalacionRepository,
             MantenimientoInstalacionRepository mantenimientoRepository,
+            ReservaRepository reservaRepository,
             BloqueoTemporalService bloqueoTemporalService) {
         this.repository = repository;
         this.caracteristicaRepository = caracteristicaRepository;
@@ -59,6 +61,7 @@ public class InstalacionesController {
         this.horarioDisponibleRepository = horarioDisponibleRepository;
         this.coordinadorInstalacionRepository = coordinadorInstalacionRepository;
         this.mantenimientoRepository = mantenimientoRepository;
+        this.reservaRepository = reservaRepository;
         this.bloqueoTemporalService = bloqueoTemporalService;
     }
 
@@ -154,7 +157,35 @@ public class InstalacionesController {
                 return ResponseEntity.badRequest().body(mensaje);
             }
 
-            // Si no hay asignaciones, proceder con la eliminación
+            // Verificar si la instalación tiene reservas confirmadas o pendientes
+            List<Reserva> reservasActivas = reservaRepository.findReservasActivasPorInstalacion(id);
+
+            if (!reservasActivas.isEmpty()) {
+                long reservasConfirmadas = reservasActivas.stream()
+                    .filter(reserva -> "confirmada".equals(reserva.getEstado()))
+                    .count();
+
+                long reservasPendientes = reservasActivas.stream()
+                    .filter(reserva -> "pendiente".equals(reserva.getEstado()))
+                    .count();
+
+                StringBuilder mensaje = new StringBuilder("No se puede eliminar la instalación porque tiene ");
+
+                if (reservasConfirmadas > 0 && reservasPendientes > 0) {
+                    mensaje.append(reservasConfirmadas).append(" reserva(s) confirmada(s) y ")
+                           .append(reservasPendientes).append(" reserva(s) pendiente(s)");
+                } else if (reservasConfirmadas > 0) {
+                    mensaje.append(reservasConfirmadas).append(" reserva(s) confirmada(s)");
+                } else if (reservasPendientes > 0) {
+                    mensaje.append(reservasPendientes).append(" reserva(s) pendiente(s)");
+                }
+
+                mensaje.append(". Debe cancelar o completar estas reservas antes de eliminar la instalación.");
+
+                return ResponseEntity.badRequest().body(mensaje.toString());
+            }
+
+            // Si no hay asignaciones ni reservas activas, proceder con la eliminación
             repository.deleteById(id);
             return ResponseEntity.noContent().build();
 

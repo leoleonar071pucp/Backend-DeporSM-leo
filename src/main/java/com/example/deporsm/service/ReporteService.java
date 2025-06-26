@@ -26,6 +26,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -205,9 +206,22 @@ public class ReporteService {
      * Obtiene los reportes más recientes
      */
     public List<ReporteDTO> obtenerReportesRecientes() {
-        return reporteRepository.findTop10ByOrderByFechaCreacionDesc().stream()
-                .map(this::convertirADTO)
-                .collect(Collectors.toList());
+        try {
+            List<Reporte> reportes = reporteRepository.findTop10ByOrderByFechaCreacionDesc();
+            if (reportes == null || reportes.isEmpty()) {
+                // Si no hay reportes, devolver una lista vacía en lugar de fallar
+                System.out.println("No se encontraron reportes recientes en la base de datos");
+                return new ArrayList<>();
+            }
+            return reportes.stream()
+                    .map(this::convertirADTO)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            System.err.println("Error al obtener reportes recientes: " + e.getMessage());
+            e.printStackTrace();
+            // Devolver lista vacía en caso de error
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -259,21 +273,22 @@ public class ReporteService {
                 break;
 
             case "mantenimiento":
-                headers = Arrays.asList("ID", "Instalación", "Tipo", "Descripción", "Fecha Inicio",
+                headers = Arrays.asList("Instalación", "Tipo", "Descripción", "Fecha Inicio",
                                       "Fecha Fin", "Estado", "Afecta Disponibilidad");
                 List<Object[]> mantenimientos = mantenimientoInstalacionRepository.findMantenimientosForReport(
                     fechaInicio, fechaFin, instalacion != null ? instalacion.getId() : null);
                 for (Object[] mantenimiento : mantenimientos) {
                     List<Object> row = new ArrayList<>();
-                    for (Object item : mantenimiento) {
-                        row.add(item != null ? item : "");
+                    // Skip the first element (ID) and add the rest
+                    for (int i = 1; i < mantenimiento.length; i++) {
+                        row.add(mantenimiento[i] != null ? mantenimiento[i] : "");
                     }
                     data.add(row);
                 }
                 break;
 
             case "asistencias":
-                headers = Arrays.asList("ID", "Coordinador", "Instalación", "Fecha", "Hora Programada Inicio",
+                headers = Arrays.asList("Coordinador", "Instalación", "Fecha", "Hora Programada Inicio",
                                       "Hora Programada Fin", "Hora Entrada", "Estado Entrada", "Hora Salida",
                                       "Estado Salida", "Ubicación");
                 List<Object[]> asistencias = asistenciaCoordinadorRepository.findAsistenciasForReport(
@@ -284,8 +299,9 @@ public class ReporteService {
                     requestDTO.getEstadoSalida());
                 for (Object[] asistencia : asistencias) {
                     List<Object> row = new ArrayList<>();
-                    for (Object item : asistencia) {
-                        row.add(item != null ? item : "");
+                    // Skip the first element (ID) and add the rest
+                    for (int i = 1; i < asistencia.length; i++) {
+                        row.add(asistencia[i] != null ? asistencia[i] : "");
                     }
                     data.add(row);
                 }
@@ -318,7 +334,7 @@ public class ReporteService {
                 System.out.println("Generando reporte de reservas...");
                 System.out.println("Fechas: " + fechaInicio + " - " + fechaFin);
                 System.out.println("Instalación ID: " + (instalacion != null ? instalacion.getId() : "null"));
-                headers = Arrays.asList("ID", "Usuario", "Instalación", "Fecha", "Hora Inicio",
+                headers = Arrays.asList("Usuario", "Instalación", "Fecha", "Hora Inicio",
                                       "Hora Fin", "Estado", "Estado Pago", "Método Pago");
                 sheetName = "Reservas";
                 List<Object[]> reservas = reservaRepository.findReservasForReport(
@@ -329,7 +345,8 @@ public class ReporteService {
                     Object[] reserva = reservas.get(i);
                     System.out.println("Procesando reserva " + (i + 1) + ":");
                     List<Object> row = new ArrayList<>();
-                    for (int j = 0; j < reserva.length; j++) {
+                    // Skip the first element (ID) and add the rest
+                    for (int j = 1; j < reserva.length; j++) {
                         Object item = reserva[j];
                         System.out.println("  Campo " + j + ": " + (item != null ? item.toString() + " (" + item.getClass().getSimpleName() + ")" : "null"));
                         row.add(item != null ? item : "");
@@ -365,15 +382,16 @@ public class ReporteService {
                 }
                 break;
             case "mantenimiento":
-                headers = Arrays.asList("ID", "Instalación", "Descripción", "Fecha Inicio",
+                headers = Arrays.asList("Instalación", "Descripción", "Fecha Inicio",
                                       "Fecha Fin", "Estado", "Afecta Disponibilidad");
                 sheetName = "Mantenimiento";
                 List<Object[]> mantenimientos = mantenimientoInstalacionRepository.findMantenimientosForReport(
                     fechaInicio, fechaFin, instalacion != null ? instalacion.getId() : null);
                 for (Object[] mantenimiento : mantenimientos) {
                     List<Object> row = new ArrayList<>();
-                    for (Object item : mantenimiento) {
-                        row.add(item);
+                    // Skip the first element (ID) and add the rest
+                    for (int i = 1; i < mantenimiento.length; i++) {
+                        row.add(mantenimiento[i]);
                     }
                     data.add(row);
                 }
@@ -384,7 +402,7 @@ public class ReporteService {
                                  ", instalacion=" + requestDTO.getInstalacionNombre() +
                                  ", estadoEntrada=" + requestDTO.getEstadoEntrada() +
                                  ", estadoSalida=" + requestDTO.getEstadoSalida());
-                headers = Arrays.asList("ID", "Coordinador", "Instalación", "Fecha", "Hora Programada Inicio",
+                headers = Arrays.asList("Coordinador", "Instalación", "Fecha", "Hora Programada Inicio",
                                       "Hora Programada Fin", "Hora Entrada", "Estado Entrada", "Hora Salida",
                                       "Estado Salida", "Ubicación");
                 sheetName = "Asistencias";
@@ -397,8 +415,9 @@ public class ReporteService {
                 System.out.println("Encontradas " + asistencias.size() + " asistencias");
                 for (Object[] asistencia : asistencias) {
                     List<Object> row = new ArrayList<>();
-                    for (Object item : asistencia) {
-                        row.add(item);
+                    // Skip the first element (ID) and add the rest
+                    for (int i = 1; i < asistencia.length; i++) {
+                        row.add(asistencia[i]);
                     }
                     data.add(row);
                 }
@@ -764,7 +783,7 @@ public class ReporteService {
             switch (requestDTO.getTipo()) {
                 case "reservas":
                     System.out.println("Generando reporte de reservas...");
-                    headers = Arrays.asList("ID", "Usuario", "Instalación", "Fecha", "Hora Inicio",
+                    headers = Arrays.asList("Usuario", "Instalación", "Fecha", "Hora Inicio",
                                           "Hora Fin", "Estado", "Estado Pago", "Método Pago");
                     sheetName = "Reservas";
                     List<Object[]> reservas = reservaRepository.findReservasForReport(
@@ -773,8 +792,9 @@ public class ReporteService {
 
                     for (Object[] reserva : reservas) {
                         List<Object> row = new ArrayList<>();
-                        for (Object item : reserva) {
-                            row.add(item != null ? item : "");
+                        // Skip the first element (ID) and add the rest
+                        for (int i = 1; i < reserva.length; i++) {
+                            row.add(reserva[i] != null ? reserva[i] : "");
                         }
                         data.add(row);
                     }
@@ -807,22 +827,23 @@ public class ReporteService {
                     }
                     break;
                 case "mantenimiento":
-                    headers = Arrays.asList("ID", "Instalación", "Tipo", "Descripción", "Fecha Inicio",
+                    headers = Arrays.asList("Instalación", "Tipo", "Descripción", "Fecha Inicio",
                                           "Fecha Fin", "Estado", "Afecta Disponibilidad");
                     sheetName = "Mantenimiento";
                     List<Object[]> mantenimientos = mantenimientoInstalacionRepository.findMantenimientosForReport(
                         fechaInicio, fechaFin, instalacion != null ? instalacion.getId() : null);
                     for (Object[] mantenimiento : mantenimientos) {
                         List<Object> row = new ArrayList<>();
-                        for (Object item : mantenimiento) {
-                            row.add(item);
+                        // Skip the first element (ID) and add the rest
+                        for (int i = 1; i < mantenimiento.length; i++) {
+                            row.add(mantenimiento[i]);
                         }
                         data.add(row);
                     }
                     break;
                 case "asistencias":
                     System.out.println("Generando reporte de asistencias...");
-                    headers = Arrays.asList("ID", "Coordinador", "Instalación", "Fecha", "Hora Programada Inicio",
+                    headers = Arrays.asList("Coordinador", "Instalación", "Fecha", "Hora Programada Inicio",
                                           "Hora Programada Fin", "Hora Entrada", "Estado Entrada", "Hora Salida",
                                           "Estado Salida", "Ubicación");
                     sheetName = "Asistencias";
@@ -835,8 +856,9 @@ public class ReporteService {
                     System.out.println("Encontradas " + asistencias.size() + " asistencias");
                     for (Object[] asistencia : asistencias) {
                         List<Object> row = new ArrayList<>();
-                        for (Object item : asistencia) {
-                            row.add(item);
+                        // Skip the first element (ID) and add the rest
+                        for (int i = 1; i < asistencia.length; i++) {
+                            row.add(asistencia[i]);
                         }
                         data.add(row);
                     }
@@ -866,28 +888,30 @@ public class ReporteService {
         // Obtener datos según el tipo de reporte
         switch (requestDTO.getTipo()) {
             case "reservas":
-                headers = Arrays.asList("ID", "Usuario", "Instalación", "Fecha", "Hora Inicio",
+                headers = Arrays.asList("Usuario", "Instalación", "Fecha", "Hora Inicio",
                                       "Hora Fin", "Estado", "Estado Pago", "Método Pago");
                 List<Object[]> reservas = reservaRepository.findReservasForReport(
                     fechaInicio, fechaFin, instalacion != null ? instalacion.getId() : null);
                 for (Object[] reserva : reservas) {
                     List<Object> row = new ArrayList<>();
-                    for (Object item : reserva) {
-                        row.add(item != null ? item : "");
+                    // Skip the first element (ID) and add the rest
+                    for (int i = 1; i < reserva.length; i++) {
+                        row.add(reserva[i] != null ? reserva[i] : "");
                     }
                     data.add(row);
                 }
                 break;
 
             case "mantenimiento":
-                headers = Arrays.asList("ID", "Instalación", "Tipo", "Descripción", "Fecha Inicio",
+                headers = Arrays.asList("Instalación", "Tipo", "Descripción", "Fecha Inicio",
                                       "Fecha Fin", "Estado", "Afecta Disponibilidad");
                 List<Object[]> mantenimientos = mantenimientoInstalacionRepository.findMantenimientosForReport(
                     fechaInicio, fechaFin, instalacion != null ? instalacion.getId() : null);
                 for (Object[] mantenimiento : mantenimientos) {
                     List<Object> row = new ArrayList<>();
-                    for (Object item : mantenimiento) {
-                        row.add(item != null ? item : "");
+                    // Skip the first element (ID) and add the rest
+                    for (int i = 1; i < mantenimiento.length; i++) {
+                        row.add(mantenimiento[i] != null ? mantenimiento[i] : "");
                     }
                     data.add(row);
                 }
@@ -921,7 +945,7 @@ public class ReporteService {
                 break;
 
             case "asistencias":
-                headers = Arrays.asList("ID", "Coordinador", "Instalación", "Fecha", "Hora Programada Inicio",
+                headers = Arrays.asList("Coordinador", "Instalación", "Fecha", "Hora Programada Inicio",
                                       "Hora Programada Fin", "Hora Entrada", "Estado Entrada", "Hora Salida",
                                       "Estado Salida", "Ubicación");
                 List<Object[]> asistencias = asistenciaCoordinadorRepository.findAsistenciasForReport(
@@ -932,8 +956,9 @@ public class ReporteService {
                     requestDTO.getEstadoSalida());
                 for (Object[] asistencia : asistencias) {
                     List<Object> row = new ArrayList<>();
-                    for (Object item : asistencia) {
-                        row.add(item != null ? item : "");
+                    // Skip the first element (ID) and add the rest
+                    for (int i = 1; i < asistencia.length; i++) {
+                        row.add(asistencia[i] != null ? asistencia[i] : "");
                     }
                     data.add(row);
                 }

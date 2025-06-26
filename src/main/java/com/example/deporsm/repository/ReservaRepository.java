@@ -428,4 +428,12 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {    
         @Param("fechaActual") java.sql.Date fechaActual,
         @Param("horaActual") java.sql.Time horaActual
     );
+
+    /**
+     * Busca reservas activas (confirmadas o pendientes) para una instalación específica
+     * Excluye reservas canceladas y completadas
+     */
+    @Query("SELECT r FROM Reserva r WHERE r.instalacion.id = :instalacionId " +
+           "AND r.estado IN ('confirmada', 'pendiente')")
+    List<Reserva> findReservasActivasPorInstalacion(@Param("instalacionId") Integer instalacionId);
 }
