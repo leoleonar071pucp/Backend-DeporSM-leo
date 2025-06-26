@@ -218,9 +218,23 @@ public class ChatbotController {
                 }
                 instalaciones = List.of(instalacionOpt.get());
             } else if (instalacionNombre != null && !instalacionNombre.trim().isEmpty()) {
+                System.out.println("Buscando instalación con nombre: '" + instalacionNombre + "'");
+
+                // Obtener todas las instalaciones para debug
+                List<Instalacion> todasInstalaciones = instalacionRepository.findAll();
+                System.out.println("Total instalaciones en BD: " + todasInstalaciones.size());
+                for (Instalacion inst : todasInstalaciones) {
+                    System.out.println("- ID: " + inst.getId() + ", Nombre: '" + inst.getNombre() + "'");
+                }
+
                 instalaciones = instalacionRepository.findAll().stream()
                     .filter(inst -> inst.getNombre().toLowerCase().contains(instalacionNombre.toLowerCase()))
                     .toList();
+
+                System.out.println("Instalaciones encontradas con filtro: " + instalaciones.size());
+                for (Instalacion inst : instalaciones) {
+                    System.out.println("- Encontrada: ID: " + inst.getId() + ", Nombre: '" + inst.getNombre() + "'");
+                }
 
                 // Si no se encuentra ninguna instalación con ese nombre
                 if (instalaciones.isEmpty()) {
