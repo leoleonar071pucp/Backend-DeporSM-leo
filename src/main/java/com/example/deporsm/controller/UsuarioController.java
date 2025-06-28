@@ -13,6 +13,7 @@ import com.example.deporsm.repository.UsuarioRepository;
 import com.example.deporsm.repository.VecinoRepository;
 import com.example.deporsm.service.UsuarioService;
 import com.example.deporsm.service.ReniecService;
+import com.example.deporsm.service.SessionManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -42,6 +43,9 @@ public class UsuarioController {
 
     @Autowired
     private ReniecService reniecService;
+
+    @Autowired
+    private SessionManagementService sessionManagementService;
 
     @GetMapping
     public List<Usuario> listarUsuarios() {
@@ -366,8 +370,13 @@ public class UsuarioController {
         try {
             return usuarioRepository.findById(id)
                 .map(vecino -> {
+                    // Terminate active sessions before deactivating
+                    sessionManagementService.terminateUserSessions(vecino.getEmail());
+
                     vecino.setActivo(false);
                     usuarioRepository.save(vecino);
+
+                    System.out.println("✅ Vecino deactivated and sessions terminated: " + vecino.getEmail());
                     return ResponseEntity.ok().build();
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -459,8 +468,14 @@ public class UsuarioController {
                     if (admin.getRol().getId() != 2) {
                         return ResponseEntity.badRequest().body("El usuario no es un administrador");
                     }
+
+                    // Terminate active sessions before deactivating
+                    sessionManagementService.terminateUserSessions(admin.getEmail());
+
                     admin.setActivo(false);
                     usuarioRepository.save(admin);
+
+                    System.out.println("✅ Administrator deactivated and sessions terminated: " + admin.getEmail());
                     return ResponseEntity.ok().build();
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -667,8 +682,14 @@ public class UsuarioController {
                     if (coordinador.getRol().getId() != 3) {
                         return ResponseEntity.badRequest().body("El usuario no es un coordinador");
                     }
+
+                    // Terminate active sessions before deactivating
+                    sessionManagementService.terminateUserSessions(coordinador.getEmail());
+
                     coordinador.setActivo(false);
                     usuarioRepository.save(coordinador);
+
+                    System.out.println("✅ Coordinator deactivated and sessions terminated: " + coordinador.getEmail());
                     return ResponseEntity.ok().build();
                 })
                 .orElse(ResponseEntity.notFound().build());

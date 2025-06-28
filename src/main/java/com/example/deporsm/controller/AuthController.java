@@ -42,7 +42,7 @@ public class AuthController {
     private AuthenticationManager authenticationManager;
 
     @PostMapping("/login")
-    public ResponseEntity<Usuario> login(@RequestBody LoginRequest request, HttpServletRequest servletRequest, HttpServletResponse response) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest servletRequest, HttpServletResponse response) {
         System.out.println("📥 Intentando login para: " + request.getEmail());
 
         try {
@@ -65,12 +65,12 @@ public class AuthController {
             return ResponseEntity.ok(usuario);
         } catch (Exception e) {
             System.out.println("❌ Error en login: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
     }
 
     @GetMapping("/me")
-    public ResponseEntity<Usuario> getCurrentUser(HttpServletRequest request) {
+    public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
         System.out.println("🧠 Obteniendo usuario desde sesión...");
 
         try {
@@ -95,12 +95,56 @@ public class AuthController {
                 return ResponseEntity.status(401).build();
             }
 
-            System.out.println("✅ Usuario autenticado: " + usuario.getEmail() + ", rol: " + usuario.getRol().getNombre());
+            // Verificar si el usuario sigue activo
+            if (!usuario.getActivo()) {
+                System.out.println("❌ Usuario inactivo detectado: " + usuario.getEmail());
+                return ResponseEntity.status(401).body("CUENTA_INACTIVA: Su cuenta está inactiva");
+            }
+
+            System.out.println("✅ Usuario autenticado y activo: " + usuario.getEmail() + ", rol: " + usuario.getRol().getNombre());
             return ResponseEntity.ok(usuario);
         } catch (Exception e) {
             System.out.println("❌ Error al obtener usuario: " + e.getMessage());
             e.printStackTrace(); // Imprime el stack trace para depuración
             return ResponseEntity.status(500).build();
+        }
+    }
+
+    @GetMapping("/session-status")
+    public ResponseEntity<?> checkSessionStatus(HttpServletRequest request) {
+        System.out.println("🔍 Verificando estado de sesión...");
+
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            if (authentication == null || !authentication.isAuthenticated()
+                    || authentication.getName().equals("anonymousUser")) {
+                System.out.println("❌ No hay autenticación válida");
+                return ResponseEntity.status(401).body("No authenticated");
+            }
+
+            // Obtener el email del usuario autenticado
+            String email = authentication.getName();
+
+            // Obtener usuario de la base de datos
+            Usuario usuario = authService.findByEmail(email);
+
+            if (usuario == null) {
+                System.out.println("❓ Usuario no encontrado: " + email);
+                return ResponseEntity.status(401).body("User not found");
+            }
+
+            // Verificar si el usuario sigue activo
+            if (!usuario.getActivo()) {
+                System.out.println("❌ Usuario inactivo: " + usuario.getEmail());
+                return ResponseEntity.status(401).body("CUENTA_INACTIVA: Su cuenta está inactiva");
+            }
+
+            System.out.println("✅ Sesión válida para: " + usuario.getEmail());
+            return ResponseEntity.ok().body("Session valid");
+        } catch (Exception e) {
+            System.out.println("❌ Error al verificar sesión: " + e.getMessage());
+            return ResponseEntity.status(500).body("Internal error");
         }
     }
 

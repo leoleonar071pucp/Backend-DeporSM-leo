@@ -23,7 +23,8 @@ public class AuthService {
         }
 
         if (!usuario.getActivo()) {
-            throw new RuntimeException("Usuario inactivo");
+            String userType = getUserTypeInSpanish(usuario.getRol().getId());
+            throw new RuntimeException("CUENTA_INACTIVA: Su cuenta de " + userType + " está inactiva. Contacte al administrador del sistema para reactivar su cuenta.");
         }
 
         return usuario;
@@ -69,5 +70,25 @@ public class AuthService {
 
     public void logout() {
         // Lógica para logout si se requiere a nivel de servicio
+    }
+
+    /**
+     * Helper method to get user type in Spanish based on role ID
+     * @param roleId The role ID
+     * @return The user type in Spanish
+     */
+    private String getUserTypeInSpanish(Integer roleId) {
+        switch (roleId) {
+            case 1:
+                return "superadministrador";
+            case 2:
+                return "administrador";
+            case 3:
+                return "coordinador";
+            case 4:
+                return "vecino";
+            default:
+                return "usuario";
+        }
     }
 }
