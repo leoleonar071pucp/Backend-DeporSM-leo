@@ -91,4 +91,13 @@ public class AuthService {
                 return "usuario";
         }
     }
+
+    /**
+     * Busca un usuario por su email retornando un Optional
+     * @param email Email del usuario
+     * @return Optional con el usuario si existe
+     */
+    public java.util.Optional<Usuario> findUserOptionalByEmail(String email) {
+        return usuarioRepository.findByEmail(email);
+    }
 }

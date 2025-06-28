@@ -65,7 +65,15 @@ public class AuthController {
             return ResponseEntity.ok(usuario);
         } catch (Exception e) {
             System.out.println("❌ Error en login: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+            
+            // Mejorar el manejo de errores para usuarios inactivos
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && (errorMessage.contains("inactiva") || errorMessage.contains("CUENTA_INACTIVA"))) {
+                System.out.println("Detectado usuario inactivo en login: " + errorMessage);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage);
+            }
+            
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage);
         }
     }
 
@@ -284,6 +292,57 @@ public class AuthController {
             System.out.println("❌ Error al restablecer contraseña: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", "Error al restablecer la contraseña: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/check-inactive")
+    public ResponseEntity<?> checkInactiveAccount(@RequestParam String email) {
+        System.out.println("🔍 Verificando si la cuenta está inactiva: " + email);
+        
+        try {
+            // Verificar si el usuario existe
+            var usuarioOptional = authService.findUserOptionalByEmail(email);
+            
+            if (usuarioOptional.isEmpty()) {
+                // El usuario no existe
+                return ResponseEntity.ok(Map.of(
+                    "exists", false,
+                    "active", false,
+                    "message", "Usuario no encontrado"
+                ));
+            }
+            
+            Usuario usuario = usuarioOptional.get();
+            String userType = getUserTypeInSpanish(usuario.getRol().getId());
+            
+            // El usuario existe, devolver su estado de activación
+            return ResponseEntity.ok(Map.of(
+                "exists", true,
+                "active", usuario.getActivo(),
+                "userType", userType,
+                "message", usuario.getActivo() 
+                    ? "Usuario activo" 
+                    : "Su cuenta de " + userType + " está inactiva. Contacte al administrador del sistema para reactivar su cuenta."
+            ));
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error al verificar cuenta inactiva: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "error", "Error al verificar estado de cuenta",
+                "message", e.getMessage()
+            ));
+        }
+    }
+    
+    private String getUserTypeInSpanish(Integer rolId) {
+        if (rolId == null) return "usuario";
+        
+        switch (rolId) {
+            case 1: return "superadmin";
+            case 2: return "administrador";
+            case 3: return "coordinador";
+            case 4: return "vecino";
+            default: return "usuario";
         }
     }
 }
