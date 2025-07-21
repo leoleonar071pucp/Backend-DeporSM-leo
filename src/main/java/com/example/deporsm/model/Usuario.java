@@ -101,9 +101,7 @@ public class Usuario {
     @JsonIgnore
     private List<CoordinadorInstalacion> coordinaciones;
 
-    @OneToMany(mappedBy = "usuario")
-    @JsonIgnore
-    private List<LogActividad> logs;
+
 
     @OneToMany(mappedBy = "usuario")
     @JsonIgnore

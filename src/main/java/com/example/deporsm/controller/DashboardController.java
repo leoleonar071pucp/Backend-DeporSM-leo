@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import com.example.deporsm.repository.UsuarioRepository;
-import com.example.deporsm.repository.LogActividadRepository;
+
 import com.example.deporsm.repository.ReservaRepository;
 import com.example.deporsm.repository.InstalacionRepository;
 import com.example.deporsm.repository.ObservacionRepository;
 import com.example.deporsm.model.Usuario;
-import com.example.deporsm.model.LogActividad;
+
 import com.example.deporsm.model.Instalacion;
 
 import java.util.*;
@@ -36,8 +36,7 @@ public class DashboardController {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-    @Autowired
-    private LogActividadRepository logActividadRepository;
+
 
     @Autowired
     private ReservaRepository reservaRepository;
@@ -86,79 +85,12 @@ public class DashboardController {
         userDistribution.put("Vecinos", (int) vecinoUsers);
         dashboardData.put("userDistribution", userDistribution);
 
-        // Add recent activity if using activity logging
-        if (logActividadRepository != null) {
-            // Get recent activity from log_actividades
-            List<LogActividad> recentActivities = logActividadRepository.findTop100ByOrderByCreatedAtDesc();
-            List<Map<String, Object>> recentActivity = new ArrayList<>();
 
-            // Take only the first 10 activities
-            recentActivities.stream().limit(10).forEach(log -> {
-                Map<String, Object> activity = new HashMap<>();
-                activity.put("id", log.getId());
-
-                if (log.getUsuario() != null) {
-                    activity.put("user", log.getUsuario().getNombre() + " " + log.getUsuario().getApellidos());
-                    activity.put("userType", getRoleString(log.getUsuario().getRol().getId()));
-                } else {
-                    activity.put("user", "Usuario Desconocido");
-                    activity.put("userType", "No Identificado");
-                }
-
-                activity.put("action", getActionDescription(log.getAccion()));
-                activity.put("type", log.getAccion());
-                activity.put("date", formatTimeAgo(log.getCreatedAt()));
-                activity.put("status", log.getEstado());
-
-                recentActivity.add(activity);
-            });
-
-            dashboardData.put("recentActivity", recentActivity);
-        }
 
         return dashboardData;
     }
 
-    private String getRoleString(int roleId) {
-        switch (roleId) {
-            case 1: return "Superadmin";
-            case 2: return "Administrador";
-            case 3: return "Coordinador";
-            case 4: return "Vecino";
-            default: return "Usuario";
-        }
-    }
 
-    private String getActionDescription(String action) {
-        switch (action.toLowerCase()) {
-            case "login": return "Inicio sesión";
-            case "logout": return "Cerró sesión";
-            case "create": return "Creó un recurso";
-            case "update": return "Actualizó un recurso";
-            case "delete": return "Eliminó un recurso";
-            default: return action;
-        }
-    }
-
-    private String formatTimeAgo(Date date) {
-        if (date == null) return "fecha desconocida";
-
-        long diffInMillis = System.currentTimeMillis() - date.getTime();
-        long seconds = diffInMillis / 1000;
-        long minutes = seconds / 60;
-        long hours = minutes / 60;
-        long days = hours / 24;
-
-        if (days > 0) {
-            return days + " día" + (days > 1 ? "s" : "") + " atrás";
-        } else if (hours > 0) {
-            return hours + " hora" + (hours > 1 ? "s" : "") + " atrás";
-        } else if (minutes > 0) {
-            return minutes + " minuto" + (minutes > 1 ? "s" : "") + " atrás";
-        } else {
-            return seconds + " segundo" + (seconds != 1 ? "s" : "") + " atrás";
-        }
-    }
 
     @GetMapping("/admin/dashboard/charts")
     public Map<String, Object> getDashboardCharts() {
